@@ -52,7 +52,9 @@ Pushes to `main` and manual runs of **Deploy GitHub Pages** execute the release
 workflow. It installs with `npm ci`, checks formatting, lint and types, runs unit
 tests, builds with the production `/fitness-pwa/` base, uploads only `dist/` as the
 Pages artifact, and deploys it with GitHub's official Pages actions. Pull requests
-do not deploy previews. `dist/` remains ignored and no `gh-pages` branch is used.
+do not deploy previews. The build and all JavaScript-based workflow actions use the
+supported Node.js 24 runtime. `dist/` remains ignored and no `gh-pages` branch is
+used.
 
 For the repository's first release, an administrator must open **Settings → Pages**
 and select **GitHub Actions** under **Build and deployment → Source**. No custom

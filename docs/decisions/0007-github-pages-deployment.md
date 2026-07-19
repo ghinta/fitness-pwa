@@ -24,6 +24,11 @@ The repository's Pages source is GitHub Actions. Deployments use the required Pa
 permissions, the `github-pages` environment, and a concurrency group that prevents
 overlap. Pull requests never create preview deployments.
 
+The workflow uses Node.js 24 LTS for the application build and Node-24-based major
+versions of all JavaScript GitHub Actions. Action majors are upgraded when GitHub
+retires their embedded runtime; this is independent from the Node version configured
+for `npm ci` and the Vite build.
+
 ## Consequences
 
 - Production URLs, manifest resources, offline navigation, and service-worker scope
