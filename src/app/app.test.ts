@@ -1,4 +1,6 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import 'fake-indexeddb/auto';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { FitnessDatabase } from '../storage';
 import { createApp } from './app';
 
 describe('application shell', () => {
@@ -6,10 +8,15 @@ describe('application shell', () => {
     window.location.hash = '';
   });
 
-  it('renders the German shell and primary navigation', () => {
+  it('renders the German shell and primary navigation', async () => {
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
     const root = document.createElement('div');
-    const app = createApp(root);
-    app.start();
+    const database = new FitnessDatabase(`app-test-${crypto.randomUUID()}`);
+    const app = createApp(root, {
+      database,
+      registerUpdates: () => () => undefined,
+    });
+    await app.start();
 
     expect(root.querySelector('header')?.textContent).toContain('Fitness PWA');
     expect(root.querySelector('main h1')?.textContent).toBe('Start');
@@ -18,5 +25,7 @@ describe('application shell', () => {
     ).toEqual(['Start', 'Verlauf', 'Einstellungen']);
 
     app.stop();
+    database.close();
+    await database.delete();
   });
 });

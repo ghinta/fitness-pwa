@@ -1,41 +1,45 @@
 # Mobile-First UI
 
-## Navigation
+## Navigation and workout flow
 
-A compact bottom navigation exposes **Start**, **Verlauf**, and **Einstellungen** when no workout is active. During a workout, the active-session flow takes priority and navigation warns before leaving. Content is designed from a 320 px viewport upward without horizontal scrolling.
-
-## Primary screen flow
+A safe-area-aware bottom navigation exposes **Start**, **Verlauf**, and
+**Einstellungen**. During the active step flow it is hidden so the current exercise
+takes priority; **Später fortsetzen** returns to the resume card and warns before
+discarding dirty input.
 
 ```text
-Start
-  -> Training A or Training B
-  -> Template overview / exercise choices
-  -> Start workout
-  -> Exercise step 1 of 5
-       -> optional warm-up entry
-       -> working-set weight + seconds + notes
-       -> previous results and recommendation
-       -> save and continue
-  -> ... exercise step 5 of 5
-  -> Review workout
-  -> Complete -> Summary
+Start → Training A/B exercise choices → Start
+  → exercise 1…5
+      → optional persisted warm-up
+      → required working weight/load, seconds, notes
+      → previous results and advisory recommendation
+  → review with recommendation per result → complete → history
 ```
 
-If an active session exists, launch opens a prominent **Training fortsetzen** action with template, progress, and start time. Discarding requires confirmation. Values entered on the current step remain in memory after a recoverable save failure.
+Reload resumes the first slot without a working set and retains the session-local
+exercise choices. Saving confirms through the visible next state only after
+persistence succeeds. A failure leaves entered values in the form.
 
 ## Supporting flows
 
-- **Verlauf**: sessions newest first → session detail; exercise name links to its result history.
-- **Einstellungen**: configure templates and slot alternatives; deactivate exercises; export data; select and validate an import file; confirm replacement.
-- **Update available**: unobtrusive banner → activate now only when no unsaved workout interaction is at risk.
-- **Storage unavailable**: blocking explanation with retry and existing-data export where possible.
+- **Verlauf** lists completed sessions newest first, session details, notes, warm-ups,
+  working sets, and per-exercise working history.
+- **Einstellungen** edits plan names/activation, slot order/activation/primary and
+  alternative exercises, exercise names/muscle groups/increments/activation, and
+  creates custom exercises.
+- **Sicherung** exports all stores; import shows a validated summary, confirms full
+  replacement, and downloads a pre-import backup.
+- **Update** uses an unobtrusive status banner and refuses activation while an active
+  or dirty workout could be interrupted.
+- **Storage failure** shows a blocking German explanation and retry without resetting
+  data.
 
-## Interaction rules
+## Interaction and accessibility
 
-Use one card per exercise step, a persistent progress indicator, numeric keyboards for weight and seconds, sensible previous-value defaults, and at least 44×44 CSS-pixel targets. Saving gives visible confirmation and moves forward only after persistence succeeds. Recommendations state both the rule and suggested next weight; they are never applied silently.
-
-Semantic headings, labels, error summaries, focus management, sufficient contrast, and reduced-motion support are required. Notes accept plain text only. German labels are concise; technical storage errors are translated into actionable language.
-
-## Open design questions
-
-Review whether history should be reachable inline without leaving the workout, whether warm-up entry starts collapsed, and whether the template overview permits per-session exercise substitution or only edits the saved template.
+The layout has no horizontal scrolling at 320 px, uses cards/steps instead of tables,
+provides 44 px or larger visible touch targets, safe-area padding, numeric input
+modes, previous-weight defaults, plain-text notes, and concise German labels.
+Semantic headings, native forms/labels/fieldsets/progress, status/alert regions, a
+skip link, focus-visible outlines, keyboard operation, sufficient contrast, and a
+reduced-motion media query are implemented. Bodyweight exercises label external
+weight as optional.

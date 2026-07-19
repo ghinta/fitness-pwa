@@ -7,4 +7,4 @@ if (!root) {
   throw new Error('Anwendungselement wurde nicht gefunden.');
 }
 
-createApp(root).start();
+void createApp(root).start();

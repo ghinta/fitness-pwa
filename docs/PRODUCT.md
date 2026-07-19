@@ -9,7 +9,7 @@ Fitness PWA lets one person record HIT-style strength workouts quickly, without 
 Version 1 includes exactly:
 
 - Two active templates, **Training A** and **Training B**, each containing five ordered movement slots.
-- Selecting one primary exercise per slot from configured alternatives; exercises and templates can be activated, deactivated, and reordered.
+- Selecting one primary exercise per slot from configured alternatives; slots can be reordered and templates/exercises can be configured or deactivated.
 - Starting, resuming, completing, or discarding one in-progress session.
 - For each slot, recording an optional warm-up set and exactly one working set. A result stores exercise, weight in kilograms, time under tension in whole seconds, and optional notes.
 - Viewing previous working-set results for the current exercise, newest first.
@@ -26,8 +26,11 @@ No accounts, login, backend, cloud sync, multi-user support, social features, su
 
 A user can install the app, finish Training A or B offline with minimal typing, reopen an interrupted workout, inspect prior results, understand the recommendation, and export/import a complete backup without silent data loss.
 
-## Assumptions and open questions
+## Final Version 1 rules
 
-Assumptions: kilograms are the only V1 unit; dates use the device time zone; one active session is sufficient; configuration changes do not rewrite history; and exercise deletion is represented by deactivation. Exercise substitutions affect the current workout by default and may later be saved explicitly as the template default. Import replaces all data only after validation and creation of a pre-import backup.
-
-Review whether warm-up values need persistence and whether arbitrary custom exercises are required in V1.
+Kilograms are the only unit; dates display in the device time zone; there is at most
+one active session; and deactivation replaces deletion. Warm-ups are persisted.
+Custom exercises are supported. Session substitutions do not alter template defaults;
+the default is changed explicitly in settings. Exercise increments default to 2.5 kg
+and are editable. Import replaces all data only after validation, confirmation, and
+creation of a pre-import backup.

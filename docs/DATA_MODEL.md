@@ -2,41 +2,70 @@
 
 ## Domain model
 
-All identifiers are stable UUID strings. Timestamps are ISO 8601 UTC strings; weights are finite non-negative decimal kilograms; durations are positive whole seconds. Historical records reference immutable IDs, not display names.
+Identifiers are stable UUID strings and timestamps are ISO 8601 UTC strings. Weight
+is a finite non-negative kilogram value or `null` for a bodyweight result without
+external load. Imported/entered weights are capped at 100,000 kg, durations at 86,400
+seconds, and equipment increments at 1,000 kg.
 
-- **Exercise**: `id`, `name`, `muscleGroup`, `movementCategory`, `equipmentType`, `active`, `createdAt`, `updatedAt`.
+- **Exercise**: `id`, `name`, `muscleGroup`, `movementCategory`, `equipmentType`,
+  `weightIncrementKg`, `active`, `createdAt`, `updatedAt`.
 - **WorkoutTemplate**: `id`, `name`, `active`, `createdAt`, `updatedAt`.
-- **ExerciseSlot**: `id`, `templateId`, `movementCategory`, `label`, `order`, `primaryExerciseId`, `alternativeExerciseIds`, `active`.
-- **WorkoutSession**: `id`, `workoutTemplateId`, `templateNameSnapshot`, `status` (`active|completed`), `startedAt`, `completedAt`, `notes`.
-- **ExerciseResult**: `id`, `workoutSessionId`, `exerciseSlotId`, `exerciseId`, `exerciseNameSnapshot`, `setType` (`warmup|working`), `weightKg`, `durationSeconds`, `notes`, `createdAt`.
+- **ExerciseSlot**: `id`, `templateId`, `movementCategory`, `label`, `order`,
+  `primaryExerciseId`, `alternativeExerciseIds`, `active`.
+- **WorkoutSession**: `id`, `workoutTemplateId`, `templateNameSnapshot`, `status`
+  (`active|completed`), `startedAt`, `completedAt`, `notes`, and
+  `exerciseSelections` (slot-ID to exercise-ID mapping).
+- **ExerciseResult**: `id`, `workoutSessionId`, `exerciseSlotId`, `exerciseId`,
+  `exerciseNameSnapshot`, `setType` (`warmup|working`), `weightKg`,
+  `durationSeconds`, `notes`, `createdAt`.
 
-Snapshots preserve meaningful history after configuration changes. Alternatives live on a slot and share its movement category; switching an exercise therefore preserves the slot relationship.
+Snapshots preserve meaningful history after configuration names change. Session
+selections preserve alternatives across reloads and remain related to the immutable
+slot ID.
 
 ## IndexedDB version 1
 
 Database name: `fitness-pwa`; schema version: `1`.
 
-| Store              | Key   | Indexes                                                                             |
-| ------------------ | ----- | ----------------------------------------------------------------------------------- |
-| `exercises`        | `id`  | `by-active`, `by-movement-category`, unique normalized name (pending decision)      |
-| `workoutTemplates` | `id`  | `by-active`                                                                         |
-| `exerciseSlots`    | `id`  | `by-template-id`, compound `[templateId, order]`                                    |
-| `workoutSessions`  | `id`  | `by-status`, `by-started-at`, `by-template-id`                                      |
-| `exerciseResults`  | `id`  | `by-session-id`, `by-exercise-id`, compound `[exerciseId, createdAt]`, `by-slot-id` |
-| `meta`             | `key` | none                                                                                |
+| Store              | Key   | Indexes                                                                      |
+| ------------------ | ----- | ---------------------------------------------------------------------------- |
+| `exercises`        | `id`  | `active`, `movementCategory`                                                 |
+| `workoutTemplates` | `id`  | `active`                                                                     |
+| `exerciseSlots`    | `id`  | `templateId`, `[templateId+order]`                                           |
+| `workoutSessions`  | `id`  | `status`, `startedAt`, `workoutTemplateId`                                   |
+| `exerciseResults`  | `id`  | `workoutSessionId`, `exerciseId`, `[exerciseId+createdAt]`, `exerciseSlotId` |
+| `meta`             | `key` | none                                                                         |
 
-`meta` stores seed version and other storage metadata, not user preferences. Initial templates and exercises are seeded once in the database creation transaction. Foreign-key integrity is enforced by repositories because IndexedDB does not provide it.
+Booleans are retained in the documented schema but active rows are filtered after a
+read because booleans are not valid IndexedDB index keys. Initial data and the seed
+version are inserted by Dexie's first-population transaction.
 
 ## Invariants and transactions
 
-Only one session may have `status: active`. A completed session has `completedAt`; an active one does not. Each session has at most one warm-up and one working result per slot. Template/slot changes are rejected while they would invalidate an active session. Results are append-only; corrections replace a record explicitly and preserve its identity.
+There is at most one active session. It selects exactly one active configured
+exercise for every active slot. A completed session has a completion time and one
+working result per selected slot. Each session has at most one warm-up and one
+working result per slot. Only bodyweight exercises may omit external weight.
+Exercise names are unique after German-locale lowercase and whitespace
+normalization. Slot categories and selected exercises must match.
+
+Results are append-only through the V1 UI. Completion, session discard, slot
+reordering, seed population, snapshot reads, and full snapshot replacement use
+transactions. Configuration changes that would invalidate an active session are
+rejected.
 
 ## Export contract
 
-The JSON root contains `format: "fitness-pwa-backup"`, `formatVersion: 1`, `exportedAt`, and arrays matching every durable store. Import rejects unknown format versions, invalid types, dangling references, duplicate IDs, unsafe lengths, and violated invariants. V1 import first creates a downloadable backup of current data, then replaces the whole database atomically after explicit confirmation; merging is deferred.
-
-Dexie is the approved IndexedDB wrapper, but Phase 1 intentionally defines no database class, stores, or migrations. This proposed schema must receive final review before persistence implementation.
+The JSON root contains `format: "fitness-pwa-backup"`, `formatVersion: 1`,
+`exportedAt`, arrays for all five entity stores, and `meta`. Import accepts at most 5
+MiB and rejects malformed JSON, unknown root fields/versions, invalid fields,
+collection limits, duplicate IDs/names/metadata keys, dangling references, and all
+domain invariants. Import never merges: after confirmation and creation of a
+downloadable pre-import backup, all six stores are replaced atomically.
 
 ## Migration policy
 
-Each schema change increments the IndexedDB version and supplies a forward migration. Migration tests start from every supported prior version. Downgrades are not supported; failures leave the prior transaction intact and show recovery/export guidance.
+Every future schema change increments the Dexie version and adds a forward migration
+tested from each supported prior version. There is no prior durable schema to migrate
+into version 1. Downgrades are unsupported; failures preserve the earlier transaction
+and show recovery guidance.

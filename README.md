@@ -1,29 +1,21 @@
 # Fitness PWA
 
-An offline-first, mobile-first fitness tracker for a single user performing HIT-style strength training. The primary target is an installed Progressive Web App on iPhone Safari. The default interface language is German.
+Offline-first, mobile-first HIT strength-training tracker for one person. The app
+runs entirely in the browser, stores data in IndexedDB, uses German UI copy, and is
+designed primarily for installation on iPhone Safari.
 
-Phase 1 provides the TypeScript/Vite application shell, three placeholder routes, project quality tooling, and PWA integration. Workout, persistence, history, and import/export features are not implemented yet.
+## Version 1
 
-## Version 1 at a glance
-
-Version 1 supports two configurable workout templates (Training A and B), exercise alternatives, one optional warm-up set and one working set per slot, result history, local weight recommendations, offline persistence, and complete JSON export/import. It deliberately excludes accounts, backends, synchronization, analytics, integrations, subscriptions, and advanced statistics.
-
-## Documentation
-
-- [Product scope](docs/PRODUCT.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [Data model and IndexedDB schema](docs/DATA_MODEL.md)
-- [Mobile UI flow](docs/UI.md)
-- [Security and privacy](docs/SECURITY.md)
-- [Testing strategy](docs/TESTING.md)
-- [Roadmap and open decisions](docs/ROADMAP.md)
-- [Architecture decisions](docs/decisions/README.md)
-
-## Technology
-
-Semantic HTML, modern CSS, TypeScript, Vite, Dexie, and `vite-plugin-pwa`, without a UI framework. Vitest covers unit tests and Playwright covers essential mobile WebKit workflows. The primary platform is iOS 17+ Safari; the initial deployment target is GitHub Pages.
+Version 1 provides configurable Training A/B plans, per-session exercise
+alternatives, an optional warm-up and one working set per slot, bodyweight support,
+exercise/session history, advisory 60–90-second weight recommendations, interrupted
+workout recovery, complete JSON backup/restore, and a prompt-updated offline PWA.
+There is no backend, account, synchronization, analytics, remote font, or external
+API.
 
 ## Development
+
+Requires a current Node.js/npm environment.
 
 ```sh
 npm install
@@ -34,10 +26,22 @@ npm run typecheck
 npm run test
 npm run build
 npm run test:e2e
+npm run preview
 ```
 
-The SVG icons under `public/icons/` are development placeholders. Production releases require reviewed raster icons in appropriate Apple/PWA sizes.
+`npm run test:e2e` runs the essential journeys against the built application with an
+iPhone-sized mobile WebKit profile. Run `npm run build` first after source changes.
+Physical iPhone installation and standalone-mode behavior remain manual release
+checks.
 
-## Status
+## Architecture and privacy
 
-Phase 1 project initialization is complete. The next phase is the tested domain core; do not add IndexedDB stores until the final schema is reviewed.
+The TypeScript/Vite application uses semantic DOM APIs without a UI framework.
+Dexie wraps IndexedDB; `vite-plugin-pwa` generates the manifest and Workbox service
+worker. All user text is rendered with text DOM APIs. Exports are plain, unencrypted
+JSON and should be stored securely.
+
+See [Product](docs/PRODUCT.md), [Architecture](docs/ARCHITECTURE.md),
+[Data model](docs/DATA_MODEL.md), [UI](docs/UI.md), [Security](docs/SECURITY.md),
+[Testing](docs/TESTING.md), [Roadmap](docs/ROADMAP.md), and the
+[ADRs](docs/decisions/README.md).

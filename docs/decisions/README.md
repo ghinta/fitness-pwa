@@ -4,4 +4,7 @@ Use this directory for choices that materially affect architecture, dependencies
 
 Name records `NNNN-short-title.md`, starting with `0001`. Each record should contain: **Status**, **Context**, **Decision**, **Consequences**, and **Alternatives considered**. Status is one of `Proposed`, `Accepted`, `Superseded`, or `Rejected`.
 
-Accepted records 0001–0004 cover the initial frontend architecture, IndexedDB wrapper, routing, and PWA integration. Future decisions should document the weight-rounding policy, supported-browser baseline, and GitHub Pages release/security-header strategy.
+Accepted records 0001–0006 cover the frontend architecture, IndexedDB wrapper,
+routing, PWA generation, final Version 1 data rules, and PWA security/update policy.
+Future deployment changes should document the final GitHub Pages URL and HTTP-header
+delivery strategy.

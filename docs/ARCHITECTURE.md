@@ -2,42 +2,49 @@
 
 ## Approach
 
-The application is a static, client-only TypeScript/Vite PWA deployed initially to GitHub Pages. It uses semantic HTML and modern CSS without a frontend framework. Domain rules remain independent of the DOM, browser storage, and service worker. Application services coordinate use cases through repository interfaces; views render state and dispatch user actions.
+The application is a static, client-only TypeScript/Vite PWA intended for GitHub
+Pages. It uses semantic DOM APIs and modern CSS without a frontend framework.
+Domain rules are independent from rendering, IndexedDB, and the service worker.
 
 ```text
-src/
-  app/          initialization, routing, state
-  components/   reusable UI controls
-  domain/       entities, validation, recommendation rules
-  services/     workout, history, import/export use cases
-  storage/      IndexedDB schema, migrations, repositories
-  styles/       tokens and global/layout styles
-  views/        page-level screens
-  main.ts       browser entry point
-public/         manifest, icons, static offline assets
-tests/          integration fixtures and Playwright tests
-docs/decisions/ architecture decision records
+src/app/          initialization, routing, update registration
+src/components/   safe DOM and navigation helpers
+src/domain/       entities, seeds, validation, recommendation rules
+src/services/     workout/configuration and backup use cases
+src/storage/      Dexie schema, transactions, repositories, visible errors
+src/styles/       mobile-first layout and controls
+src/views/        Start, active workout, history, and settings screens
+tests/e2e/        essential mobile WebKit journeys
+public/icons/     local install icons
 ```
-
-Phase 1 creates this structure. Empty domain, service, and storage directories are reserved without implementing their behavior.
 
 ## Runtime flow
 
-The Phase 1 shell resolves `#/`, `#/verlauf`, and `#/einstellungen` through a small hash router. Hash routing avoids GitHub Pages rewrite requirements. In a later persistence phase, startup will open and migrate IndexedDB through Dexie, restore an active session, and render the appropriate route. Views call services, services validate domain values and use repositories, and repositories perform atomic transactions. UI state may be held in memory; only non-critical preferences may use `localStorage`.
+Startup opens schema version 1, seeds defaults only on first population, restores an
+active session, and renders `#/`, `#/training`, `#/verlauf`, or `#/einstellungen`.
+Views dispatch to `FitnessService` and `BackupService`; services validate domain
+values and use repository interfaces; repositories enforce references and atomic
+transactions. Hash routing keeps deep links compatible with GitHub Pages.
 
-`vite-plugin-pwa` generates the manifest and Workbox service worker. It caches only versioned application-shell assets and does not cache JSON exports. Registration uses prompt mode so a future update UI can avoid disruption during an active workout.
+The active session stores an exercise choice for every active slot. Results are
+persisted immediately after a successful save, so reload selects the first slot
+without a working result. Entered but unsaved form values remain visible after a
+recoverable write failure.
 
-## Boundaries and failure handling
+## Failure and update behavior
 
-Storage failures block writes visibly and preserve the entered form for retry. Completion writes the final result and session status in one transaction. Imports are parsed and fully validated before any replacement transaction begins. Existing data is exported or explicitly confirmed before destructive replacement.
+Storage errors are translated into visible German messages and never trigger an
+automatic reset. Completion and two-slot reordering are atomic. Imports are parsed,
+size-limited, and fully validated before the replacement transaction; the UI
+downloads a current backup immediately before replacement.
+
+`vite-plugin-pwa` precaches only the versioned application shell. Registration uses
+prompt mode. A waiting worker is activated only after explicit action and is blocked
+while an active or dirty workout could be interrupted. JSON backup URLs are excluded
+from caching and navigation fallback.
 
 ## Approved decisions
 
-- Use a small hash route table and no UI framework.
-- Use Dexie for IndexedDB access; stores remain unimplemented in Phase 1.
-- Use `vite-plugin-pwa` for manifest and service-worker integration.
-- Support iOS 17+ Safari as the primary platform and GitHub Pages as the initial host.
-- Keep recommendation calculation pure and deterministic.
-- Treat exported JSON as a public, versioned interchange contract.
-
-The first four technical choices are recorded in ADRs 0001–0004. The build uses a relative Vite base so repository Pages deployments resolve assets correctly.
+ADRs 0001–0006 record the framework-free UI, Dexie, hash routing, PWA generation,
+final V1 data rules, and service-worker/security policy. The relative Vite base
+supports repository-scoped GitHub Pages deployment.

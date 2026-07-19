@@ -1,28 +1,50 @@
 # Testing Strategy
 
-## Test layers
+## Automated layers
 
-Vitest will cover pure domain rules, validation, application services, and repositories against a controllable IndexedDB implementation. Playwright will cover only essential browser journeys on a mobile-sized WebKit project. Manual checks remain necessary for installation and standalone behavior on a physical iPhone.
+Vitest covers pure domain rules, seed integrity, import parsing, application services,
+the update prompt, and Dexie repositories through the test-only `fake-indexeddb`
+implementation. Playwright uses an iPhone 13-sized WebKit project against the built
+preview server.
 
-## Required coverage
+Domain coverage includes 59, 60, 90, and 91 seconds; 2.5%/increment rounding;
+non-mutating recommendations; entity bounds; selections; duplicates; relationships;
+and completed-session invariants. Repository/service tests cover schema/population,
+single-active enforcement, active-configuration guards, unique sets, atomic
+completion/reordering/replacement, rollback, resume, bodyweight/warm-up handling, and
+editable increments. Backup tests cover valid full exports plus malformed, unknown,
+oversized, duplicate, and dangling inputs.
 
-Every domain rule needs boundary tests, especially durations of 59, 60, 90, and 91 seconds; percentage/rounding behavior; and recommendations never mutating records. Repository tests cover indexes, atomic completion, single-active-session enforcement, migrations, and failure behavior. Import tests cover valid backups, every rejected invariant, oversized input, duplicate IDs, dangling references, and transactional rollback.
+## Essential browser journeys
 
-Essential end-to-end scenarios are:
+Mobile WebKit tests cover:
 
-1. Start Training A, record five working sets, complete it, and see history.
-2. Interrupt and resume an active session after reload while offline.
-3. Switch to an alternative exercise without losing slot-related history.
-4. Export data, validate and confirm import, then verify restored records.
-5. Reject malformed import without changing existing data.
-6. Receive and defer a service-worker update safely.
-
-## Conventions
-
-Unit files use `*.test.ts` beside the module or under a mirrored test directory; browser tests use `tests/e2e/*.spec.ts`. Test names describe observable behavior, for example `suggests an increase above 90 seconds`. Prefer factories with explicit overrides over large fixtures. Freeze time and identifiers when assertions depend on them.
+1. Shell navigation.
+2. Training A with a selected alternative, five working sets, recommendation,
+   completion, session detail, and exercise history.
+3. Reloading an interrupted workout and persisted warm-up, plus verification that
+   HTML and JavaScript shell assets are precached.
+4. Export, validated import summary, explicit confirmation, pre-import download,
+   restore, and malformed-import rejection without data loss.
 
 ## Commands
 
-Phase 1 provides `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm run test`, `npm run test:e2e`, and `npm run build`. Unit tests use jsdom for the DOM shell and route resolution. The Playwright project uses a mobile WebKit profile as the closest automated approximation of the primary iOS 17+ Safari platform. Physical-device PWA installation remains a release check.
+```text
+npm run format:check
+npm run lint
+npm run typecheck
+npm run test
+npm run build
+npm run test:e2e
+```
 
-No numeric coverage threshold is set initially; critical domain, migration, and import paths require complete behavioral coverage. Establish a threshold after the first implementation slice so it reflects meaningful code rather than encouraging shallow assertions.
+The browser suite needs permission to bind its local preview port. No numeric coverage
+threshold is used; critical domain, transaction, and import paths have direct
+behavioral tests.
+
+## Manual release checks
+
+On a physical iOS 17+ device: deploy through HTTPS, install from Safari, launch in
+standalone mode, complete/reopen a workout in airplane mode, exercise the waiting
+update before/during a workout, export to Files, restore that backup, verify safe-area
+spacing/keyboard behavior, and confirm data survives a normal app/OS restart.

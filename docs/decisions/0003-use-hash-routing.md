@@ -6,11 +6,14 @@ Accepted
 
 ## Context
 
-GitHub Pages serves static files and does not provide arbitrary SPA fallback rewrites. The application needs only Start, Verlauf, and Einstellungen routes.
+GitHub Pages serves static files and does not provide arbitrary SPA fallback
+rewrites. The application has only Start, active workout, Verlauf, and Einstellungen
+routes.
 
 ## Decision
 
-Use a small route table driven by `location.hash`: `#/`, `#/verlauf`, and `#/einstellungen`. Unknown routes resolve to Start.
+Use a small route table driven by `location.hash`: `#/`, `#/training`, `#/verlauf`,
+and `#/einstellungen`. Unknown routes resolve to Start.
 
 ## Consequences
 

@@ -2,28 +2,40 @@
 
 ## Threat model
 
-The app has no server, credentials, or authorization boundary. Protected assets are workout history, notes, and backups stored on or exported from the device. Relevant threats are accidental deletion or corruption, malicious import files, script injection through user text, compromised third-party code, stale service-worker assets, and disclosure through a shared/unlocked device or exported file.
+The app has no server, credentials, or authorization boundary. Protected assets are
+workout history, notes, and exported backups. Relevant threats are accidental loss,
+corruption, malicious import files, injection through user text, compromised
+third-party code, stale service-worker assets, and disclosure from an unlocked device
+or exported file. Physical access to an unlocked phone and device compromise are
+outside V1; IndexedDB and exports are not encrypted by the app.
 
-Device compromise and physical access to an unlocked phone are outside V1 protection; IndexedDB is not encrypted by the app. The UI must state that anyone with device access may read the data.
+## Implemented controls
 
-## Controls
+- No remote scripts, fonts, APIs, trackers, analytics, permissions, or secrets.
+- User text is assigned through DOM text properties; untrusted content is never sent
+  to `innerHTML`.
+- Import is limited to 5 MiB and validates the exact format/version, fields,
+  collection bounds, identifiers, dates, numbers, uniqueness, references, and domain
+  invariants before storage is touched.
+- The current database is downloaded before a confirmed import; replacement is one
+  transaction and rolls back on write failure.
+- The document defines a restrictive CSP for scripts, styles, images, connections,
+  fonts, objects, base/form/frame behavior, manifest, and workers. Production hosting
+  should also deliver this as an HTTP header because `frame-ancestors` is not enforced
+  from a meta policy.
+- Workbox precaches versioned local shell assets only. JSON exports are generated as
+  Blob downloads and excluded from precache/navigation fallback.
+- A waiting worker activates only on explicit action and never while active/dirty
+  workout state could be interrupted.
+- Storage/migration failures are visible and never reset the database automatically.
 
-- Load no third-party scripts, remote fonts, trackers, analytics, or external APIs.
-- Render user text with DOM text APIs; never pass untrusted content to `innerHTML`.
-- Validate every imported field, collection size, relationship, identifier, date, number range, and format version before writing.
-- Replace data only in one transaction after showing a summary and explicit confirmation. Never silently discard the current database.
-- Use a restrictive deployment Content Security Policy, initially: `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; manifest-src 'self'; worker-src 'self'`.
-- Avoid inline JavaScript and unnecessary permissions. Store no secrets.
-- Cache only application assets. Set exported JSON responses/downloads so the service worker ignores them.
+## Data lifecycle and recovery
 
-## Data lifecycle
+Data remains in IndexedDB until site data is cleared or a confirmed import replaces
+it. Deactivation preserves history. Exports are readable JSON; the UI warns users to
+store them securely and states that anyone with device access may read local data.
+When storage can be opened, settings provides a full export. A startup-open failure
+offers retry and does not claim that unreadable data was removed.
 
-Data remains in IndexedDB until the user clears site data or explicitly replaces it through import. Export creates a plain JSON file; the app must warn that the file is readable and should be stored securely. Deactivation preserves history. A future “delete all data” feature is outside V1 unless separately approved.
-
-## Recovery and reporting
-
-Storage and migration errors must be visible and must not trigger automatic reset. When readable, offer export before recovery. Security-relevant dependency or policy changes require an ADR and review. No security guarantee should imply encrypted local storage.
-
-## Open questions
-
-Confirm the deployment host and its CSP/header capabilities, maximum accepted backup size, and whether exports should support optional client-side encryption after V1.
+Security-relevant dependency, hosting, or policy changes require an ADR and review.
+Optional encrypted backups remain outside V1.

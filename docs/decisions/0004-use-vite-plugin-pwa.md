@@ -14,7 +14,9 @@ Use `vite-plugin-pwa` with generated Workbox service worker and prompt-style reg
 
 ## Consequences
 
-PWA assets follow Vite builds automatically. The plugin and Workbox increase development dependencies and require update testing, especially on iOS 17+ Safari. Phase 1 icons are local SVG placeholders; production raster icons remain required.
+PWA assets follow Vite builds automatically. The plugin and Workbox increase
+development dependencies and require update testing, especially on iOS 17+ Safari.
+Raster icons, cache exclusions, and the final prompt policy are implemented in ADR 0006.
 
 ## Alternatives considered
 

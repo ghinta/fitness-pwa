@@ -4,6 +4,7 @@ import { resolveRoute } from './router';
 describe('hash router', () => {
   it.each([
     ['#/', '/'],
+    ['#/training', '/training'],
     ['#/verlauf', '/verlauf'],
     ['#/einstellungen', '/einstellungen'],
   ] as const)('resolves %s', (hash, expected) => {

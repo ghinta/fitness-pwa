@@ -6,8 +6,10 @@ export default defineConfig({
   plugins: [
     VitePWA({
       registerType: 'prompt',
-      includeAssets: ['icons/icon.svg', 'icons/icon-maskable.svg'],
+      injectRegister: 'auto',
+      includeManifestIcons: false,
       manifest: {
+        id: './',
         name: 'Fitness PWA',
         short_name: 'Fitness',
         description:
@@ -20,22 +22,44 @@ export default defineConfig({
         theme_color: '#173f35',
         icons: [
           {
-            src: 'icons/icon.svg',
-            sizes: 'any',
-            type: 'image/svg+xml',
+            src: 'icons/icon-192.png',
+            sizes: '192x192',
+            type: 'image/png',
             purpose: 'any',
           },
           {
-            src: 'icons/icon-maskable.svg',
-            sizes: 'any',
-            type: 'image/svg+xml',
+            src: 'icons/icon-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: 'icons/icon-maskable-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
+          {
+            src: 'icons/icon-maskable-512.png',
+            sizes: '512x512',
+            type: 'image/png',
             purpose: 'maskable',
           },
         ],
       },
       workbox: {
         navigateFallback: 'index.html',
-        globPatterns: ['**/*.{js,css,html,svg,webmanifest}'],
+        navigateFallbackDenylist: [
+          /\/(?:exports?|backups?)(?:\/|$)/i,
+          /\.json(?:$|\?)/i,
+        ],
+        globPatterns: ['**/*.{js,css,html,png,svg}'],
+        globIgnores: ['**/*export*.json', '**/*backup*.json'],
+        runtimeCaching: [],
+        cleanupOutdatedCaches: true,
+        clientsClaim: false,
+        skipWaiting: false,
+        disableDevLogs: true,
       },
     }),
   ],

@@ -1,4 +1,4 @@
-import type { RoutePath } from '../app/router';
+import { resolveRoute, type RoutePath } from '../app/router';
 
 const links: ReadonlyArray<{ path: RoutePath; label: string }> = [
   { path: '/', label: 'Start' },
@@ -6,20 +6,25 @@ const links: ReadonlyArray<{ path: RoutePath; label: string }> = [
   { path: '/einstellungen', label: 'Einstellungen' },
 ];
 
-export function createNavigation(onNavigate: () => RoutePath): HTMLElement {
+export function createNavigation(): HTMLElement {
   const navigation = document.createElement('nav');
   navigation.className = 'bottom-navigation';
   navigation.ariaLabel = 'Hauptnavigation';
-
   for (const { path, label } of links) {
     const anchor = document.createElement('a');
     anchor.href = `#${path}`;
     anchor.textContent = label;
-    anchor.addEventListener('click', () => {
-      window.setTimeout(onNavigate, 0);
-    });
+    anchor.dataset.route = path;
     navigation.append(anchor);
   }
-
   return navigation;
+}
+
+export function updateNavigation(navigation: HTMLElement): void {
+  const current = resolveRoute(window.location.hash);
+  navigation.querySelectorAll<HTMLAnchorElement>('a').forEach((anchor) => {
+    if (anchor.dataset.route === current)
+      anchor.setAttribute('aria-current', 'page');
+    else anchor.removeAttribute('aria-current');
+  });
 }
