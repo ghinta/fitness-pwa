@@ -16,14 +16,14 @@ Snapshots preserve meaningful history after configuration changes. Alternatives 
 
 Database name: `fitness-pwa`; schema version: `1`.
 
-| Store | Key | Indexes |
-| --- | --- | --- |
-| `exercises` | `id` | `by-active`, `by-movement-category`, unique normalized name (pending decision) |
-| `workoutTemplates` | `id` | `by-active` |
-| `exerciseSlots` | `id` | `by-template-id`, compound `[templateId, order]` |
-| `workoutSessions` | `id` | `by-status`, `by-started-at`, `by-template-id` |
-| `exerciseResults` | `id` | `by-session-id`, `by-exercise-id`, compound `[exerciseId, createdAt]`, `by-slot-id` |
-| `meta` | `key` | none |
+| Store              | Key   | Indexes                                                                             |
+| ------------------ | ----- | ----------------------------------------------------------------------------------- |
+| `exercises`        | `id`  | `by-active`, `by-movement-category`, unique normalized name (pending decision)      |
+| `workoutTemplates` | `id`  | `by-active`                                                                         |
+| `exerciseSlots`    | `id`  | `by-template-id`, compound `[templateId, order]`                                    |
+| `workoutSessions`  | `id`  | `by-status`, `by-started-at`, `by-template-id`                                      |
+| `exerciseResults`  | `id`  | `by-session-id`, `by-exercise-id`, compound `[exerciseId, createdAt]`, `by-slot-id` |
+| `meta`             | `key` | none                                                                                |
 
 `meta` stores seed version and other storage metadata, not user preferences. Initial templates and exercises are seeded once in the database creation transaction. Foreign-key integrity is enforced by repositories because IndexedDB does not provide it.
 
@@ -33,7 +33,9 @@ Only one session may have `status: active`. A completed session has `completedAt
 
 ## Export contract
 
-The JSON root contains `format: "fitness-pwa-backup"`, `formatVersion: 1`, `exportedAt`, and arrays matching every durable store. Import rejects unknown format versions, invalid types, dangling references, duplicate IDs, unsafe lengths, and violated invariants. V1 import replaces the whole database atomically after confirmation; merging is deferred.
+The JSON root contains `format: "fitness-pwa-backup"`, `formatVersion: 1`, `exportedAt`, and arrays matching every durable store. Import rejects unknown format versions, invalid types, dangling references, duplicate IDs, unsafe lengths, and violated invariants. V1 import first creates a downloadable backup of current data, then replaces the whole database atomically after explicit confirmation; merging is deferred.
+
+Dexie is the approved IndexedDB wrapper, but Phase 1 intentionally defines no database class, stores, or migrations. This proposed schema must receive final review before persistence implementation.
 
 ## Migration policy
 

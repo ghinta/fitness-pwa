@@ -4,4 +4,4 @@ Use this directory for choices that materially affect architecture, dependencies
 
 Name records `NNNN-short-title.md`, starting with `0001`. Each record should contain: **Status**, **Context**, **Decision**, **Consequences**, and **Alternatives considered**. Status is one of `Proposed`, `Accepted`, `Superseded`, or `Rejected`.
 
-Initial ADR candidates are the IndexedDB access strategy, service-worker tooling, routing strategy, supported browser baseline, and weight recommendation/rounding policy. Decisions remain proposed until reviewed; this planning foundation intentionally selects no dependency.
+Accepted records 0001–0004 cover the initial frontend architecture, IndexedDB wrapper, routing, and PWA integration. Future decisions should document the weight-rounding policy, supported-browser baseline, and GitHub Pages release/security-header strategy.

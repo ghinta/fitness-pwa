@@ -1,0 +1,123 @@
+:root {
+  color: #17201d;
+  background: #f5f7f2;
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+}
+
+.skip-link {
+  position: fixed;
+  z-index: 10;
+  top: 0.5rem;
+  left: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  color: white;
+  background: #173f35;
+  transform: translateY(-150%);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+.app-header {
+  padding: max(1rem, env(safe-area-inset-top)) 1rem 1rem;
+  color: white;
+  background: #173f35;
+}
+
+.app-brand {
+  display: block;
+  max-width: 42rem;
+  margin: 0 auto;
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.app-content {
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 1rem 1rem calc(6rem + env(safe-area-inset-bottom));
+}
+
+.view-card {
+  padding: 1.25rem;
+  border: 1px solid #d6ded8;
+  border-radius: 1rem;
+  background: white;
+  box-shadow: 0 0.25rem 1rem rgb(23 63 53 / 8%);
+}
+
+.view-card h1 {
+  margin-top: 0;
+  font-size: clamp(1.75rem, 8vw, 2.25rem);
+}
+
+.view-card p {
+  margin-bottom: 0;
+  color: #43524d;
+  line-height: 1.6;
+}
+
+.bottom-navigation {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  padding: 0.5rem max(0.5rem, env(safe-area-inset-right))
+    max(0.5rem, env(safe-area-inset-bottom))
+    max(0.5rem, env(safe-area-inset-left));
+  border-top: 1px solid #d6ded8;
+  background: rgb(255 255 255 / 96%);
+}
+
+.bottom-navigation a {
+  display: grid;
+  min-height: 3rem;
+  place-items: center;
+  border-radius: 0.75rem;
+  color: #29473e;
+  font-size: 0.875rem;
+  font-weight: 650;
+  text-align: center;
+  text-decoration: none;
+}
+
+.bottom-navigation a:focus-visible,
+.bottom-navigation a:hover {
+  outline: 2px solid #2f725f;
+  outline-offset: 2px;
+  background: #e5f0eb;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

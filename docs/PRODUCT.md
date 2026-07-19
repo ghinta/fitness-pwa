@@ -13,7 +13,7 @@ Version 1 includes exactly:
 - Starting, resuming, completing, or discarding one in-progress session.
 - For each slot, recording an optional warm-up set and exactly one working set. A result stores exercise, weight in kilograms, time under tension in whole seconds, and optional notes.
 - Viewing previous working-set results for the current exercise, newest first.
-- A non-binding next-weight suggestion: above 90 seconds suggests a 2–5% increase; 60–90 seconds suggests retaining weight; below 60 seconds suggests retaining or reducing it. Recommendations never alter stored values.
+- A non-binding next-weight suggestion: above 90 seconds suggests a 2.5% increase rounded to a configurable equipment increment; at 90 seconds or below it suggests retaining weight. Recommendations never alter stored values.
 - On-device IndexedDB persistence, an offline application shell, installability, and safe update notification.
 - Exporting and importing all durable application data in one versioned JSON file. Import is validated and requires explicit confirmation before replacement.
 - German UI copy, accessible touch interaction, and narrow-screen support.
@@ -28,6 +28,6 @@ A user can install the app, finish Training A or B offline with minimal typing, 
 
 ## Assumptions and open questions
 
-Assumptions: kilograms are the only V1 unit; dates use the device time zone; one active session is sufficient; configuration changes do not rewrite history; and exercise deletion is represented by deactivation.
+Assumptions: kilograms are the only V1 unit; dates use the device time zone; one active session is sufficient; configuration changes do not rewrite history; and exercise deletion is represented by deactivation. Exercise substitutions affect the current workout by default and may later be saved explicitly as the template default. Import replaces all data only after validation and creation of a pre-import backup.
 
-Review whether warm-up values need persistence, whether arbitrary custom exercises are required in V1, and whether a below-60-second recommendation should use a fixed reduction percentage.
+Review whether warm-up values need persistence and whether arbitrary custom exercises are required in V1.

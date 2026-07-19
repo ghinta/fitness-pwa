@@ -2,7 +2,7 @@
 
 An offline-first, mobile-first fitness tracker for a single user performing HIT-style strength training. The primary target is an installed Progressive Web App on iPhone Safari. The default interface language is German.
 
-This repository currently contains the product and technical plan only. Application code, package metadata, and dependencies will be added in a separate initialization task after the decisions in these documents are reviewed.
+Phase 1 provides the TypeScript/Vite application shell, three placeholder routes, project quality tooling, and PWA integration. Workout, persistence, history, and import/export features are not implemented yet.
 
 ## Version 1 at a glance
 
@@ -19,10 +19,25 @@ Version 1 supports two configurable workout templates (Training A and B), exerci
 - [Roadmap and open decisions](docs/ROADMAP.md)
 - [Architecture decisions](docs/decisions/README.md)
 
-## Planned technology
+## Technology
 
-Semantic HTML, modern CSS, TypeScript, Vite, IndexedDB, a Web App Manifest, and a Service Worker. Vitest will cover domain and service logic; Playwright will cover essential mobile workflows. No framework or runtime dependency has been selected yet.
+Semantic HTML, modern CSS, TypeScript, Vite, Dexie, and `vite-plugin-pwa`, without a UI framework. Vitest covers unit tests and Playwright covers essential mobile WebKit workflows. The primary platform is iOS 17+ Safari; the initial deployment target is GitHub Pages.
+
+## Development
+
+```sh
+npm install
+npm run dev
+npm run format:check
+npm run lint
+npm run typecheck
+npm run test
+npm run build
+npm run test:e2e
+```
+
+The SVG icons under `public/icons/` are development placeholders. Production releases require reviewed raster icons in appropriate Apple/PWA sizes.
 
 ## Status
 
-Planning foundation complete; implementation has not started. Before development, review the decisions listed in `docs/ROADMAP.md`, especially browser support, IndexedDB wrapper choice, recommendation rounding, and import conflict behavior.
+Phase 1 project initialization is complete. The next phase is the tested domain core; do not add IndexedDB stores until the final schema is reviewed.

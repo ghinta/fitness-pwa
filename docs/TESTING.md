@@ -21,8 +21,8 @@ Essential end-to-end scenarios are:
 
 Unit files use `*.test.ts` beside the module or under a mirrored test directory; browser tests use `tests/e2e/*.spec.ts`. Test names describe observable behavior, for example `suggests an increase above 90 seconds`. Prefer factories with explicit overrides over large fixtures. Freeze time and identifiers when assertions depend on them.
 
-## Planned commands
+## Commands
 
-Once project initialization is approved: `npm run lint`, `npm run typecheck`, `npm run test`, `npm run test:e2e`, and `npm run build`. CI should run all five. No commands or dependencies are created in this planning task.
+Phase 1 provides `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm run test`, `npm run test:e2e`, and `npm run build`. Unit tests use jsdom for the DOM shell and route resolution. The Playwright project uses a mobile WebKit profile as the closest automated approximation of the primary iOS 17+ Safari platform. Physical-device PWA installation remains a release check.
 
 No numeric coverage threshold is set initially; critical domain, migration, and import paths require complete behavioral coverage. Establish a threshold after the first implementation slice so it reflects meaningful code rather than encouraging shallow assertions.
