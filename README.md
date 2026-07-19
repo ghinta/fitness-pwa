@@ -1,5 +1,7 @@
 # Fitness PWA
 
+Production: [https://ghinta.github.io/fitness-pwa/](https://ghinta.github.io/fitness-pwa/)
+
 Offline-first, mobile-first HIT strength-training tracker for one person. The app
 runs entirely in the browser, stores data in IndexedDB, uses German UI copy, and is
 designed primarily for installation on iPhone Safari.
@@ -15,11 +17,20 @@ API.
 
 ## Development
 
-Requires a current Node.js/npm environment.
+Requires Node.js 24 LTS and npm. Install the locked dependencies, then start Vite:
 
 ```sh
-npm install
+npm ci
 npm run dev
+```
+
+The development server exposes the app below
+`http://localhost:5173/fitness-pwa/`, matching the repository subpath used in
+production.
+
+## Build and verification
+
+```sh
 npm run format:check
 npm run lint
 npm run typecheck
@@ -30,9 +41,24 @@ npm run preview
 ```
 
 `npm run test:e2e` runs the essential journeys against the built application with an
-iPhone-sized mobile WebKit profile. Run `npm run build` first after source changes.
-Physical iPhone installation and standalone-mode behavior remain manual release
-checks.
+iPhone-sized mobile WebKit profile at `/fitness-pwa/`. Run `npm run build` first
+after source changes. `npm run preview` serves that production build at
+`http://localhost:4173/fitness-pwa/`. Physical iPhone installation and
+standalone-mode behavior remain manual release checks.
+
+## GitHub Pages deployment
+
+Pushes to `main` and manual runs of **Deploy GitHub Pages** execute the release
+workflow. It installs with `npm ci`, checks formatting, lint and types, runs unit
+tests, builds with the production `/fitness-pwa/` base, uploads only `dist/` as the
+Pages artifact, and deploys it with GitHub's official Pages actions. Pull requests
+do not deploy previews. `dist/` remains ignored and no `gh-pages` branch is used.
+
+For the repository's first release, an administrator must open **Settings → Pages**
+and select **GitHub Actions** under **Build and deployment → Source**. No custom
+domain is required. After a successful workflow run, verify the production URL
+above, installability, offline reload, and update prompting on a physical iPhone.
+Repository settings and deployments are intentionally not changed by local tooling.
 
 ## Architecture and privacy
 

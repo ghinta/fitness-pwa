@@ -8,7 +8,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   reporter: 'html',
   use: {
-    baseURL: 'http://127.0.0.1:4173',
+    baseURL: 'http://127.0.0.1:4173/fitness-pwa/',
     trace: 'on-first-retry',
   },
   projects: [
@@ -19,7 +19,7 @@ export default defineConfig({
   ],
   webServer: {
     command: 'npm run preview -- --host 127.0.0.1',
-    url: 'http://127.0.0.1:4173',
+    url: 'http://127.0.0.1:4173/fitness-pwa/',
     reuseExistingServer: !process.env.CI,
   },
 });

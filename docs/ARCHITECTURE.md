@@ -45,6 +45,19 @@ from caching and navigation fallback.
 
 ## Approved decisions
 
-ADRs 0001–0006 record the framework-free UI, Dexie, hash routing, PWA generation,
-final V1 data rules, and service-worker/security policy. The relative Vite base
-supports repository-scoped GitHub Pages deployment.
+ADRs 0001–0007 record the framework-free UI, Dexie, hash routing, PWA generation,
+final V1 data rules, service-worker/security policy, and GitHub Pages deployment.
+
+## Deployment
+
+The production origin is `https://ghinta.github.io` and the application base and
+service-worker scope are explicitly `/fitness-pwa/`. Manifest identity, start URL,
+icons, generated assets, and service-worker registration all use that repository
+path. Application routes remain hash-based, so direct access such as
+`https://ghinta.github.io/fitness-pwa/#/verlauf` never requires a server rewrite.
+
+`.github/workflows/deploy-pages.yml` is the only deployment path. On pushes to
+`main`, or a manual dispatch, it verifies and builds the application, uploads only
+`dist/` as the Pages artifact, and deploys through the protected `github-pages`
+environment with official GitHub actions. Concurrency queues deployments instead
+of allowing overlapping releases. Pull requests do not trigger deployment.
