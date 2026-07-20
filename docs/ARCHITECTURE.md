@@ -20,16 +20,18 @@ public/icons/     local install icons
 
 ## Runtime flow
 
-Startup opens schema version 1, seeds defaults only on first population, restores an
-active session, and renders `#/`, `#/training`, `#/verlauf`, or `#/einstellungen`.
+Startup opens schema version 2, seeds defaults only on first population, migrates
+version-1 installations with the two additional slots, restores an active session,
+and renders `#/`, `#/training`, `#/verlauf`, or `#/einstellungen`.
 Views dispatch to `FitnessService` and `BackupService`; services validate domain
 values and use repository interfaces; repositories enforce references and atomic
 transactions. Hash routing keeps deep links compatible with GitHub Pages.
 
-The active session stores an exercise choice for every active slot. Results are
-persisted immediately after a successful save, so reload selects the first slot
-without a working result. Entered but unsaved form values remain visible after a
-recoverable write failure.
+The active session stores an exercise choice for every active slot and at most one
+timestamp-based set timer or stopped timer draft. Exercise choices can change until
+the first result for that slot; **Als Standard verwenden** also updates the future
+template default. Results are persisted immediately after a successful save, so
+reload selects the first slot without a working result.
 
 ## Failure and update behavior
 
@@ -45,8 +47,9 @@ from caching and navigation fallback.
 
 ## Approved decisions
 
-ADRs 0001–0007 record the framework-free UI, Dexie, hash routing, PWA generation,
-final V1 data rules, service-worker/security policy, and GitHub Pages deployment.
+ADRs 0001–0008 record the framework-free UI, Dexie, hash routing, PWA generation,
+V1 data rules, service-worker/security policy, GitHub Pages deployment, and the
+integrated workout-flow extension.
 
 ## Deployment
 

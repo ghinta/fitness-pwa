@@ -6,7 +6,7 @@ import type {
 } from './entities';
 import { DEFAULT_WEIGHT_INCREMENT_KG } from './entities';
 
-export const INITIAL_SEED_VERSION = 1;
+export const INITIAL_SEED_VERSION = 2;
 const SEEDED_AT = '2026-01-01T00:00:00.000Z';
 
 const ids = {
@@ -31,6 +31,10 @@ const ids = {
   overheadPress: '20000000-0000-4000-8000-000000000017',
   shoulderPress: '20000000-0000-4000-8000-000000000018',
   bulgarianSplitSquat: '20000000-0000-4000-8000-000000000019',
+  tricepsPushdown: '20000000-0000-4000-8000-000000000020',
+  dips: '20000000-0000-4000-8000-000000000021',
+  bicepsCurl: '20000000-0000-4000-8000-000000000022',
+  hammerCurl: '20000000-0000-4000-8000-000000000023',
 } as const;
 
 type SeedExercise = Omit<Exercise, 'createdAt' | 'updatedAt' | 'active'>;
@@ -192,6 +196,38 @@ export const DEFAULT_EXERCISES: readonly Exercise[] = [
     equipmentType: 'bodyweight',
     weightIncrementKg: DEFAULT_WEIGHT_INCREMENT_KG,
   }),
+  exercise({
+    id: ids.tricepsPushdown,
+    name: 'Trizepsdrücken am Kabelzug',
+    muscleGroup: 'Trizeps',
+    movementCategory: 'trizeps',
+    equipmentType: 'cable',
+    weightIncrementKg: DEFAULT_WEIGHT_INCREMENT_KG,
+  }),
+  exercise({
+    id: ids.dips,
+    name: 'Dips',
+    muscleGroup: 'Trizeps',
+    movementCategory: 'trizeps',
+    equipmentType: 'bodyweight',
+    weightIncrementKg: DEFAULT_WEIGHT_INCREMENT_KG,
+  }),
+  exercise({
+    id: ids.bicepsCurl,
+    name: 'Bizepscurls',
+    muscleGroup: 'Bizeps',
+    movementCategory: 'bizeps',
+    equipmentType: 'free-weight',
+    weightIncrementKg: DEFAULT_WEIGHT_INCREMENT_KG,
+  }),
+  exercise({
+    id: ids.hammerCurl,
+    name: 'Hammercurls',
+    muscleGroup: 'Bizeps',
+    movementCategory: 'bizeps',
+    equipmentType: 'free-weight',
+    weightIncrementKg: DEFAULT_WEIGHT_INCREMENT_KG,
+  }),
 ];
 
 export const DEFAULT_WORKOUT_TEMPLATES: readonly WorkoutTemplate[] = [
@@ -254,6 +290,7 @@ export const DEFAULT_EXERCISE_SLOTS: readonly ExerciseSlot[] = [
     ids.plank,
     ids.abMachine,
   ]),
+  slot(ids.trainingA, 6, 'Trizeps', 'trizeps', [ids.tricepsPushdown, ids.dips]),
   slot(ids.trainingB, 1, 'Hintere Kette', 'hintere-kette', [
     ids.deadlift,
     ids.romanianDeadlift,
@@ -276,6 +313,7 @@ export const DEFAULT_EXERCISE_SLOTS: readonly ExerciseSlot[] = [
     ids.plank,
     ids.abMachine,
   ]),
+  slot(ids.trainingB, 6, 'Bizeps', 'bizeps', [ids.bicepsCurl, ids.hammerCurl]),
 ];
 
 export function createInitialDomainData(): DomainData {

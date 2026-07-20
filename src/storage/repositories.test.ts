@@ -1,12 +1,14 @@
 import 'fake-indexeddb/auto';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import Dexie from 'dexie';
 
 import type {
   Exercise,
   ExerciseResult,
   WorkoutSession,
 } from '../domain/entities';
+import { createInitialDomainData } from '../domain/seeds';
 import {
   FitnessDatabase,
   SEED_VERSION_META_KEY,
@@ -42,14 +44,14 @@ describe('FitnessDatabase', () => {
       'Training B',
     ]);
     expect(exercises.length).toBeGreaterThan(10);
-    expect(seedVersion?.value).toBe(1);
+    expect(seedVersion?.value).toBe(2);
 
     database.close();
     await database.open();
     expect(await database.workoutTemplates.count()).toBe(2);
   });
 
-  it('defines the documented indexes for every version 1 store', () => {
+  it('defines the documented indexes for every version 2 store', () => {
     expect(indexNames(database, 'exercises')).toEqual([
       'active',
       'movementCategory',
@@ -71,6 +73,43 @@ describe('FitnessDatabase', () => {
       'exerciseSlotId',
     ]);
     expect(indexNames(database, 'meta')).toEqual([]);
+  });
+
+  it('migrates version 1 data without replacing existing records', async () => {
+    const name = `fitness-pwa-v1-${crypto.randomUUID()}`;
+    const legacy = new Dexie(name);
+    legacy.version(1).stores({
+      exercises: 'id, active, movementCategory',
+      workoutTemplates: 'id, active',
+      exerciseSlots: 'id, templateId, [templateId+order]',
+      workoutSessions: 'id, status, startedAt, workoutTemplateId',
+      exerciseResults:
+        'id, workoutSessionId, exerciseId, [exerciseId+createdAt], exerciseSlotId',
+      meta: 'key',
+    });
+    await legacy.open();
+    const seed = createInitialDomainData();
+    const existingExercise = { ...seed.exercises[0]!, name: 'Meine Kniebeuge' };
+    await legacy
+      .table('exercises')
+      .bulkAdd([existingExercise, ...seed.exercises.slice(1, 19)]);
+    await legacy.table('workoutTemplates').bulkAdd(seed.workoutTemplates);
+    await legacy
+      .table('exerciseSlots')
+      .bulkAdd(seed.exerciseSlots.filter(({ order }) => order <= 5));
+    await legacy.table('meta').add({ key: SEED_VERSION_META_KEY, value: 1 });
+    legacy.close();
+
+    const migrated = await openFitnessDatabase(new FitnessDatabase(name));
+    expect((await migrated.exercises.get(existingExercise.id))?.name).toBe(
+      'Meine Kniebeuge',
+    );
+    expect(
+      await migrated.exerciseSlots.filter(({ order }) => order === 6).count(),
+    ).toBe(2);
+    expect((await migrated.meta.get(SEED_VERSION_META_KEY))?.value).toBe(2);
+    migrated.close();
+    await Dexie.delete(name);
   });
 });
 
@@ -199,12 +238,12 @@ describe('snapshot repository', () => {
 
     expect(snapshot.exercises).not.toHaveLength(0);
     expect(snapshot.workoutTemplates).toHaveLength(2);
-    expect(snapshot.exerciseSlots).toHaveLength(10);
+    expect(snapshot.exerciseSlots).toHaveLength(12);
     expect(snapshot.workoutSessions).toEqual([]);
     expect(snapshot.exerciseResults).toEqual([]);
     expect(snapshot.meta).toContainEqual({
       key: SEED_VERSION_META_KEY,
-      value: 1,
+      value: 2,
     });
   });
 

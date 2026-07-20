@@ -2,7 +2,8 @@
 
 ## Automated layers
 
-Vitest covers pure domain rules, seed integrity, import parsing, application services,
+Vitest covers pure domain rules, seed integrity, import parsing, application services
+(including timer persistence and current/default selections),
 the update prompt, and Dexie repositories through the test-only `fake-indexeddb`
 implementation. Playwright uses an iPhone 13-sized WebKit project against the built
 preview server.
@@ -20,12 +21,14 @@ oversized, duplicate, and dangling inputs.
 Mobile WebKit tests cover:
 
 1. Shell navigation.
-2. Training A with a selected alternative, five working sets, recommendation,
-   completion, session detail, and exercise history.
-3. Reloading an interrupted workout and persisted warm-up, plus verification that
+2. Training A with an in-workout selected alternative, six timer-measured working
+   sets, recommendation, completion, session detail, and exercise history.
+3. Reloading a running timer and persisted warm-up, plus verification that
    HTML and JavaScript shell assets are precached.
 4. Export, validated import summary, explicit confirmation, pre-import download,
    restore, and malformed-import rejection without data loss.
+5. Adding, replacing, thumbnail-rendering, and removing a locally resized exercise
+   image.
 
 ## Commands
 

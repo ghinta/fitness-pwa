@@ -8,13 +8,16 @@ external load. Imported/entered weights are capped at 100,000 kg, durations at 8
 seconds, and equipment increments at 1,000 kg.
 
 - **Exercise**: `id`, `name`, `muscleGroup`, `movementCategory`, `equipmentType`,
-  `weightIncrementKg`, `active`, `createdAt`, `updatedAt`.
+  `weightIncrementKg`, optional local `image` (`dataUrl`, `thumbnailDataUrl`,
+  `updatedAt`), `active`, `createdAt`, `updatedAt`.
 - **WorkoutTemplate**: `id`, `name`, `active`, `createdAt`, `updatedAt`.
 - **ExerciseSlot**: `id`, `templateId`, `movementCategory`, `label`, `order`,
   `primaryExerciseId`, `alternativeExerciseIds`, `active`.
 - **WorkoutSession**: `id`, `workoutTemplateId`, `templateNameSnapshot`, `status`
   (`active|completed`), `startedAt`, `completedAt`, `notes`, and
-  `exerciseSelections` (slot-ID to exercise-ID mapping).
+  `exerciseSelections` (slot-ID to exercise-ID mapping), plus optional `setTimer`
+  (`exerciseSlotId`, `setType`, `startedAt`, nullable `stoppedAt` and
+  `durationSeconds`, plus the in-progress `weightKg` and `notes`).
 - **ExerciseResult**: `id`, `workoutSessionId`, `exerciseSlotId`, `exerciseId`,
   `exerciseNameSnapshot`, `setType` (`warmup|working`), `weightKg`,
   `durationSeconds`, `notes`, `createdAt`.
@@ -23,9 +26,9 @@ Snapshots preserve meaningful history after configuration names change. Session
 selections preserve alternatives across reloads and remain related to the immutable
 slot ID.
 
-## IndexedDB version 1
+## IndexedDB version 2
 
-Database name: `fitness-pwa`; schema version: `1`.
+Database name: `fitness-pwa`; schema version: `2`.
 
 | Store              | Key   | Indexes                                                                      |
 | ------------------ | ----- | ---------------------------------------------------------------------------- |
@@ -38,7 +41,9 @@ Database name: `fitness-pwa`; schema version: `1`.
 
 Booleans are retained in the documented schema but active rows are filtered after a
 read because booleans are not valid IndexedDB index keys. Initial data and the seed
-version are inserted by Dexie's first-population transaction.
+version are inserted by Dexie's first-population transaction. The version-2 forward
+migration preserves existing rows and adds only the new arm exercises and sixth slot
+for each template when their stable IDs are absent.
 
 ## Invariants and transactions
 
@@ -52,13 +57,16 @@ normalization. Slot categories and selected exercises must match.
 Results are append-only through the V1 UI. Completion, session discard, slot
 reordering, seed population, snapshot reads, and full snapshot replacement use
 transactions. Configuration changes that would invalidate an active session are
-rejected.
+rejected. An active session has at most one timer/draft, preventing overlapping set
+timers. Its duration is derived from start/stop timestamps and may be corrected
+before saving.
 
 ## Export contract
 
 The JSON root contains `format: "fitness-pwa-backup"`, `formatVersion: 1`,
-`exportedAt`, arrays for all five entity stores, and `meta`. Import accepts at most 5
-MiB and rejects malformed JSON, unknown root fields/versions, invalid fields,
+`exportedAt`, arrays for all five entity stores, and `meta`. Image data and thumbnails
+are embedded in exercise rows. Import accepts at most 50 MiB and rejects malformed
+JSON, unknown root fields/versions, invalid fields,
 collection limits, duplicate IDs/names/metadata keys, dangling references, and all
 domain invariants. Import never merges: after confirmation and creation of a
 downloadable pre-import backup, all six stores are replaced atomically.
@@ -66,6 +74,6 @@ downloadable pre-import backup, all six stores are replaced atomically.
 ## Migration policy
 
 Every future schema change increments the Dexie version and adds a forward migration
-tested from each supported prior version. There is no prior durable schema to migrate
-into version 1. Downgrades are unsupported; failures preserve the earlier transaction
-and show recovery guidance.
+tested from each supported prior version. Version 2 migrates the durable version-1
+schema as described above. Downgrades are unsupported; failures preserve the earlier
+transaction and show recovery guidance.

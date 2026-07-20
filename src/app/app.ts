@@ -43,6 +43,7 @@ export function createApp(
   let rendering = 0;
   let dirty = false;
   let activeWorkout = false;
+  let runningTimer = false;
   let fitness = dependencies.fitness;
   let backup = dependencies.backup;
 
@@ -91,6 +92,7 @@ export function createApp(
       const active = await fitness.getActiveWorkout();
       if (renderId !== rendering || stopped) return;
       activeWorkout = active !== undefined;
+      runningTimer = active?.session.setTimer?.stoppedAt === null;
       navigation.hidden = resolveRoute(window.location.hash) === '/training';
       const view = await views[resolveRoute(window.location.hash)](context());
       if (renderId !== rendering || stopped) return;
@@ -106,8 +108,12 @@ export function createApp(
   };
 
   const onHashChange = (): void => {
-    if (dirty) {
-      const stay = !window.confirm('Nicht gespeicherte Eingaben verwerfen?');
+    if (dirty || runningTimer) {
+      const stay = !window.confirm(
+        runningTimer
+          ? 'Der Timer läuft noch. Training wirklich verlassen?'
+          : 'Nicht gespeicherte Eingaben verwerfen?',
+      );
       if (stay) {
         window.history.forward();
         return;
@@ -117,7 +123,7 @@ export function createApp(
     void render();
   };
   const onBeforeUnload = (event: BeforeUnloadEvent): void => {
-    if (dirty) event.preventDefault();
+    if (dirty || runningTimer) event.preventDefault();
   };
   let disposeUpdates = (): void => undefined;
 

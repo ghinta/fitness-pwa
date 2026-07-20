@@ -3,17 +3,19 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 test('completes Training A, resumes after reload, and shows alternative history', async ({
   page,
 }) => {
+  await page.clock.install({ time: new Date('2026-07-19T12:00:00Z') });
   await page.goto('./#/');
   await expect(page.getByRole('heading', { name: 'Start' })).toBeVisible();
-  await page
-    .getByLabel('2. Brust')
-    .first()
-    .selectOption({ label: 'Bankdrücken' });
   await page.getByRole('button', { name: 'Training starten' }).first().click();
 
   await expect(page.getByRole('heading', { name: 'Kniebeuge' })).toBeVisible();
-  await saveWorkingSet(page, '50', '91', 'Saubere Ausführung');
+  await saveWorkingSet(page, '50', 91, 'Saubere Ausführung');
 
+  await expect(
+    page.getByRole('heading', { name: 'Liegestütze' }),
+  ).toBeVisible();
+  await page.getByRole('radio', { name: 'Bankdrücken' }).check();
+  await page.getByRole('button', { name: 'Übung übernehmen' }).click();
   await expect(
     page.getByRole('heading', { name: 'Bankdrücken' }),
   ).toBeVisible();
@@ -21,17 +23,21 @@ test('completes Training A, resumes after reload, and shows alternative history'
   await expect(
     page.getByRole('heading', { name: 'Bankdrücken' }),
   ).toBeVisible();
-  await saveWorkingSet(page, '40', '75');
+  await saveWorkingSet(page, '40', 75);
   await expect(
     page.getByRole('heading', { name: 'Langhantelrudern' }),
   ).toBeVisible();
-  await saveWorkingSet(page, '45', '75');
+  await saveWorkingSet(page, '45', 75);
   await expect(page.getByRole('heading', { name: 'Beinbeuger' })).toBeVisible();
-  await saveWorkingSet(page, '35', '75');
+  await saveWorkingSet(page, '35', 75);
   await expect(
     page.getByRole('heading', { name: 'Hängendes Beinheben' }),
   ).toBeVisible();
-  await saveWorkingSet(page, '', '75');
+  await saveWorkingSet(page, '', 75);
+  await expect(
+    page.getByRole('heading', { name: 'Trizepsdrücken am Kabelzug' }),
+  ).toBeVisible();
+  await saveWorkingSet(page, '20', 75);
 
   await expect(
     page.getByRole('heading', { name: 'Training prüfen' }),
@@ -53,14 +59,25 @@ test('completes Training A, resumes after reload, and shows alternative history'
 test('persists an optional warmup after reload and caches the offline shell', async ({
   page,
 }) => {
+  await page.clock.install({ time: new Date('2026-07-19T12:00:00Z') });
   await page.goto('./#/');
   await page.getByRole('button', { name: 'Training starten' }).first().click();
   await expect(page.getByRole('heading', { name: 'Kniebeuge' })).toBeVisible();
 
   const warmup = formWithHeading(page, 'Optionaler Aufwärmsatz');
   await warmup.locator('input[name="weight"]').fill('20');
-  await warmup.locator('input[name="duration"]').fill('30');
-  await warmup.getByRole('button', { name: 'Aufwärmsatz speichern' }).click();
+  await warmup.getByRole('button', { name: 'Start' }).click();
+  await page.clock.fastForward(30_000);
+  await page.reload();
+  const resumedWarmup = formWithHeading(page, 'Optionaler Aufwärmsatz');
+  await expect(resumedWarmup.getByText('30 s')).toBeVisible();
+  await resumedWarmup.getByRole('button', { name: 'Stop' }).click();
+  await expect(resumedWarmup.locator('input[name="duration"]')).toHaveValue(
+    '30',
+  );
+  await resumedWarmup
+    .getByRole('button', { name: 'Aufwärmsatz speichern' })
+    .click();
   await expect(
     page.getByRole('heading', { name: 'Aufwärmsatz gespeichert' }),
   ).toBeVisible();
@@ -161,11 +178,41 @@ test('creates a custom exercise and adds it to a configured slot', async ({
     .click();
 
   await page.getByRole('link', { name: 'Start' }).click();
+  await page.getByRole('button', { name: 'Training starten' }).first().click();
   await expect(
-    page.getByLabel('1. Beine').first().getByRole('option', {
-      name: 'Hackenschmidt-Kniebeuge',
-    }),
-  ).toHaveCount(1);
+    page.getByRole('radio', { name: 'Hackenschmidt-Kniebeuge' }),
+  ).toBeVisible();
+});
+
+test('adds, replaces, and removes a locally resized exercise image', async ({
+  page,
+}) => {
+  await page.goto('./#/einstellungen');
+  const exerciseRow = () =>
+    page
+      .locator('details.exercise-row')
+      .filter({ has: page.locator('summary').filter({ hasText: 'Kniebeuge' }) })
+      .first();
+  await exerciseRow().locator('summary').click();
+  const image = {
+    name: 'kniebeuge.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+      'base64',
+    ),
+  };
+  await exerciseRow().getByLabel('Bild aus Mediathek').setInputFiles(image);
+  await expect(exerciseRow().locator('summary img')).toBeVisible();
+
+  await exerciseRow().locator('summary').click();
+  await exerciseRow()
+    .getByLabel('Bild aus Mediathek ersetzen')
+    .setInputFiles(image);
+  await expect(exerciseRow().locator('summary img')).toBeVisible();
+  await exerciseRow().locator('summary').click();
+  await exerciseRow().getByRole('button', { name: 'Bild entfernen' }).click();
+  await expect(exerciseRow().locator('summary img')).toHaveCount(0);
 });
 
 function formWithHeading(page: Page, heading: string): Locator {
@@ -177,12 +224,14 @@ function formWithHeading(page: Page, heading: string): Locator {
 async function saveWorkingSet(
   page: Page,
   weight: string,
-  duration: string,
+  duration: number,
   notes = '',
 ): Promise<void> {
   const form = formWithHeading(page, 'Arbeitssatz');
   if (weight !== '') await form.locator('input[name="weight"]').fill(weight);
-  await form.locator('input[name="duration"]').fill(duration);
+  await form.getByRole('button', { name: 'Start' }).click();
+  await page.clock.fastForward(duration * 1000);
+  await form.getByRole('button', { name: 'Stop' }).click();
   if (notes) await form.locator('textarea[name="notes"]').fill(notes);
   await form
     .getByRole('button', { name: 'Arbeitssatz speichern & weiter' })

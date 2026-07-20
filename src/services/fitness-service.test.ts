@@ -83,7 +83,7 @@ describe('fitness service', () => {
     const history = await service.listHistory();
     expect(await service.getActiveWorkout()).toBeUndefined();
     expect(history).toHaveLength(1);
-    expect(history[0]!.results).toHaveLength(6);
+    expect(history[0]!.results).toHaveLength(7);
   });
 
   it('updates an existing exercise increment without rewriting its identity', async () => {
@@ -100,5 +100,71 @@ describe('fitness service', () => {
       (await service.repositories.exercises.get(exercise.id))
         ?.weightIncrementKg,
     ).toBe(1.25);
+  });
+
+  it('changes only the current slot selection unless it is explicitly made the default', async () => {
+    const plan = (await service.listPlans())[0]!;
+    const session = await service.startWorkout(plan.template.id);
+    const slot = plan.slots[1]!;
+    const alternative = slot.exercises[1]!;
+
+    await service.selectExercise(session, slot.slot, alternative.id, false);
+    expect(
+      (await service.getActiveWorkout())?.session.exerciseSelections[
+        slot.slot.id
+      ],
+    ).toBe(alternative.id);
+    expect(
+      (await service.getPlan(plan.template.id)).slots[1]!.slot
+        .primaryExerciseId,
+    ).toBe(slot.slot.primaryExerciseId);
+
+    await service.selectExercise(
+      (await service.getActiveWorkout())!.session,
+      slot.slot,
+      alternative.id,
+      true,
+    );
+    expect(
+      (await service.getPlan(plan.template.id)).slots[1]!.slot
+        .primaryExerciseId,
+    ).toBe(alternative.id);
+  });
+
+  it('derives a persisted timer duration from timestamps and clears it when saved', async () => {
+    let time = new Date('2026-07-19T12:00:00.000Z');
+    const timedService = new FitnessService(
+      service.repositories,
+      () => time,
+      () => crypto.randomUUID(),
+    );
+    const plan = (await timedService.listPlans())[0]!;
+    const session = await timedService.startWorkout(plan.template.id);
+
+    await timedService.startTimer(
+      session,
+      plan.slots[0]!.slot,
+      'working',
+      50,
+      '',
+    );
+    expect(
+      (await timedService.getActiveWorkout())?.session.setTimer?.stoppedAt,
+    ).toBeNull();
+    time = new Date('2026-07-19T12:01:35.000Z');
+    const active = (await timedService.getActiveWorkout())!;
+    await expect(timedService.stopTimer(active.session)).resolves.toBe(95);
+    const stopped = (await timedService.getActiveWorkout())!;
+    expect(stopped.session.setTimer?.durationSeconds).toBe(95);
+
+    await timedService.saveSet(stopped.session, plan.slots[0]!.slot, {
+      setType: 'working',
+      weightKg: 50,
+      durationSeconds: 94,
+      notes: '',
+    });
+    expect(
+      (await timedService.getActiveWorkout())?.session.setTimer,
+    ).toBeNull();
   });
 });

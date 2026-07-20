@@ -2,6 +2,7 @@ import type {
   Exercise,
   ExerciseResult,
   ExerciseSlot,
+  SetTimer,
   WorkoutSession,
   WorkoutTemplate,
 } from '../domain/entities';
@@ -40,6 +41,18 @@ export interface WorkoutRepository {
   getActiveSession(): Promise<WorkoutSession | undefined>;
   listSessions(): Promise<WorkoutSession[]>;
   startSession(session: WorkoutSession): Promise<void>;
+  selectExercise(
+    sessionId: string,
+    slotId: string,
+    exerciseId: string,
+    useAsDefault: boolean,
+  ): Promise<void>;
+  startTimer(sessionId: string, timer: SetTimer): Promise<void>;
+  stopTimer(
+    sessionId: string,
+    stoppedAt: string,
+    durationSeconds: number,
+  ): Promise<void>;
   saveResult(result: ExerciseResult): Promise<void>;
   listSessionResults(sessionId: string): Promise<ExerciseResult[]>;
   completeSession(
@@ -315,6 +328,153 @@ class DexieWorkoutRepository implements WorkoutRepository {
         ),
       'Das Ergebnis konnte nicht gespeichert werden.',
     );
+  }
+
+  async selectExercise(
+    sessionId: string,
+    slotId: string,
+    exerciseId: string,
+    useAsDefault: boolean,
+  ): Promise<void> {
+    await runStorageOperation(
+      () =>
+        this.database.transaction(
+          'rw',
+          this.database.workoutSessions,
+          this.database.exerciseSlots,
+          this.database.exercises,
+          this.database.exerciseResults,
+          async () => {
+            const [session, slot, exercise] = await Promise.all([
+              this.database.workoutSessions.get(sessionId),
+              this.database.exerciseSlots.get(slotId),
+              this.database.exercises.get(exerciseId),
+            ]);
+            if (!session || session.status !== 'active' || !slot || !exercise) {
+              throw new StorageError(
+                'integrity',
+                'Die Übungsauswahl ist nicht verfügbar.',
+              );
+            }
+            if (
+              slot.templateId !== session.workoutTemplateId ||
+              !exercise.active ||
+              ![
+                slot.primaryExerciseId,
+                ...slot.alternativeExerciseIds,
+              ].includes(exerciseId)
+            ) {
+              throw new StorageError(
+                'constraint',
+                'Diese Übung gehört nicht zum aktuellen Übungsplatz.',
+              );
+            }
+            if (
+              await this.database.exerciseResults
+                .where('workoutSessionId')
+                .equals(sessionId)
+                .filter((result) => result.exerciseSlotId === slotId)
+                .count()
+            ) {
+              throw new StorageError(
+                'constraint',
+                'Nach dem ersten gespeicherten Satz kann die Übung nicht mehr gewechselt werden.',
+              );
+            }
+            if (session.setTimer?.exerciseSlotId === slotId) {
+              throw new StorageError(
+                'constraint',
+                'Während eines Timers kann die Übung nicht gewechselt werden.',
+              );
+            }
+            await this.database.workoutSessions.update(sessionId, {
+              exerciseSelections: {
+                ...session.exerciseSelections,
+                [slotId]: exerciseId,
+              },
+            });
+            if (useAsDefault && slot.primaryExerciseId !== exerciseId) {
+              await this.database.exerciseSlots.update(slotId, {
+                primaryExerciseId: exerciseId,
+                alternativeExerciseIds: [
+                  slot.primaryExerciseId,
+                  ...slot.alternativeExerciseIds.filter(
+                    (id) => id !== exerciseId,
+                  ),
+                ],
+              });
+            }
+          },
+        ),
+      'Die Übungsauswahl konnte nicht gespeichert werden.',
+    );
+  }
+
+  async startTimer(sessionId: string, timer: SetTimer): Promise<void> {
+    await runStorageOperation(
+      () =>
+        this.database.transaction(
+          'rw',
+          this.database.workoutSessions,
+          this.database.exerciseResults,
+          async () => {
+            const session = await this.database.workoutSessions.get(sessionId);
+            if (!session || session.status !== 'active') {
+              throw new StorageError(
+                'integrity',
+                'Das Training ist nicht aktiv.',
+              );
+            }
+            if (session.setTimer) {
+              throw new StorageError(
+                'constraint',
+                'Es ist bereits ein Timer aktiv oder noch nicht gespeichert.',
+              );
+            }
+            if (!session.exerciseSelections[timer.exerciseSlotId]) {
+              throw new StorageError(
+                'integrity',
+                'Der Timer gehört zu keinem ausgewählten Übungsplatz.',
+              );
+            }
+            const existing = await this.database.exerciseResults
+              .where('workoutSessionId')
+              .equals(sessionId)
+              .filter(
+                (result) =>
+                  result.exerciseSlotId === timer.exerciseSlotId &&
+                  result.setType === timer.setType,
+              )
+              .count();
+            if (existing) {
+              throw new StorageError(
+                'constraint',
+                'Dieser Satz wurde bereits gespeichert.',
+              );
+            }
+            await this.database.workoutSessions.update(sessionId, {
+              setTimer: timer,
+            });
+          },
+        ),
+      'Der Timer konnte nicht gestartet werden.',
+    );
+  }
+
+  async stopTimer(
+    sessionId: string,
+    stoppedAt: string,
+    durationSeconds: number,
+  ): Promise<void> {
+    await runStorageOperation(async () => {
+      const session = await this.database.workoutSessions.get(sessionId);
+      if (!session?.setTimer || session.setTimer.stoppedAt !== null) {
+        throw new StorageError('constraint', 'Es läuft kein Timer.');
+      }
+      await this.database.workoutSessions.update(sessionId, {
+        setTimer: { ...session.setTimer, stoppedAt, durationSeconds },
+      });
+    }, 'Der Timer konnte nicht gestoppt werden.');
   }
 
   listSessionResults(sessionId: string): Promise<ExerciseResult[]> {
@@ -629,6 +789,12 @@ async function saveResultInTransaction(
     );
   }
   await database.exerciseResults.put(result);
+  if (
+    session.setTimer?.exerciseSlotId === result.exerciseSlotId &&
+    session.setTimer.setType === result.setType
+  ) {
+    await database.workoutSessions.update(session.id, { setTimer: null });
+  }
 }
 
 function assertSnapshotIntegrity(snapshot: StorageSnapshot): void {

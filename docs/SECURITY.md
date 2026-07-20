@@ -14,7 +14,9 @@ outside V1; IndexedDB and exports are not encrypted by the app.
 - No remote scripts, fonts, APIs, trackers, analytics, permissions, or secrets.
 - User text is assigned through DOM text properties; untrusted content is never sent
   to `innerHTML`.
-- Import is limited to 5 MiB and validates the exact format/version, fields,
+- Imported exercise images are accepted only as bounded local JPEG/WebP data URLs;
+  source photos are resized and compressed before IndexedDB storage.
+- Import is limited to 50 MiB and validates the exact format/version, fields,
   collection bounds, identifiers, dates, numbers, uniqueness, references, and domain
   invariants before storage is touched.
 - The current database is downloaded before a confirmed import; replacement is one
@@ -31,8 +33,9 @@ outside V1; IndexedDB and exports are not encrypted by the app.
 
 ## Data lifecycle and recovery
 
-Data remains in IndexedDB until site data is cleared or a confirmed import replaces
-it. Deactivation preserves history. Exports are readable JSON; the UI warns users to
+Data, including exercise photos, remains in IndexedDB until site data is cleared, an
+image is removed, or a confirmed import replaces it. Deactivation preserves history.
+Exports are readable JSON with embedded images; the UI warns users to
 store them securely and states that anyone with device access may read local data.
 When storage can be opened, settings provides a full export. A startup-open failure
 offers retry and does not claim that unreadable data was removed.

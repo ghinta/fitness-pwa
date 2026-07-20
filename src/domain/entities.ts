@@ -14,9 +14,26 @@ export interface Exercise {
   movementCategory: string;
   equipmentType: EquipmentType;
   weightIncrementKg: number;
+  image?: ExerciseImage | null;
   active: boolean;
   createdAt: ISODateString;
   updatedAt: ISODateString;
+}
+
+export interface ExerciseImage {
+  dataUrl: string;
+  thumbnailDataUrl: string;
+  updatedAt: ISODateString;
+}
+
+export interface SetTimer {
+  exerciseSlotId: UUID;
+  setType: SetType;
+  startedAt: ISODateString;
+  stoppedAt: ISODateString | null;
+  durationSeconds: number | null;
+  weightKg: number | null;
+  notes: string;
 }
 
 export interface WorkoutTemplate {
@@ -47,6 +64,7 @@ export interface WorkoutSession {
   completedAt: ISODateString | null;
   notes: string;
   exerciseSelections: Record<UUID, UUID>;
+  setTimer?: SetTimer | null;
 }
 
 export interface ExerciseResult {

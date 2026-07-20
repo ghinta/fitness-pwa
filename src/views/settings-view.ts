@@ -7,7 +7,11 @@ import {
   statusMessage,
 } from '../components/dom';
 import type { EquipmentType, Exercise, ExerciseSlot } from '../domain';
-import type { PreparedImport } from '../services/backup-service';
+import {
+  MAX_IMPORT_BYTES,
+  type PreparedImport,
+} from '../services/backup-service';
+import { prepareExerciseImage } from '../services/exercise-image-service';
 import type { TemplatePlan } from '../services/fitness-service';
 import type { ViewContext } from './context';
 
@@ -290,7 +294,7 @@ function createExerciseSettings(
         text: `${exercise.muscleGroup} · ${exercise.movementCategory}${exercise.active ? '' : ' · deaktiviert'}`,
       }),
     );
-    rowSummary.append(copy);
+    rowSummary.append(exerciseThumbnail(exercise), copy);
     const edit = element('form', { className: 'exercise-edit' });
     const editName = element('input');
     editName.value = exercise.name;
@@ -312,10 +316,59 @@ function createExerciseSettings(
     editActive.type = 'checkbox';
     editActive.checked = exercise.active;
     const editMessage = element('div');
+    const imageInput = element('input');
+    imageInput.type = 'file';
+    imageInput.accept = 'image/*';
+    const cameraInput = element('input');
+    cameraInput.type = 'file';
+    cameraInput.accept = 'image/*';
+    cameraInput.setAttribute('capture', 'environment');
+    const saveSelectedImage = async (file: File | undefined): Promise<void> => {
+      if (!file) return;
+      try {
+        await context.fitness.updateExerciseImage(
+          exercise,
+          await prepareExerciseImage(file),
+        );
+        await context.refresh();
+      } catch (error) {
+        editMessage.replaceChildren(statusMessage(toMessage(error), 'error'));
+      }
+    };
+    imageInput.addEventListener(
+      'change',
+      asyncListener(() => saveSelectedImage(imageInput.files?.[0])),
+    );
+    cameraInput.addEventListener(
+      'change',
+      asyncListener(() => saveSelectedImage(cameraInput.files?.[0])),
+    );
+    const imageActions = element('div', { className: 'button-row' });
+    const removeImage = button(
+      'Bild entfernen',
+      'button button--danger-quiet button--small',
+    );
+    removeImage.disabled = !exercise.image;
+    removeImage.addEventListener(
+      'click',
+      asyncListener(async () => {
+        await runAndRefresh(context, editMessage, () =>
+          context.fitness.updateExerciseImage(exercise, null),
+        );
+      }),
+    );
+    imageActions.append(removeImage);
     edit.append(
       field('Name', editName),
       field('Muskelgruppe', editMuscle),
       field('Gewichtsschritt (kg)', editIncrement),
+      field(
+        exercise.image ? 'Bild aus Mediathek ersetzen' : 'Bild aus Mediathek',
+        imageInput,
+        'Wird vor dem lokalen Speichern verkleinert',
+      ),
+      field('Foto aufnehmen', cameraInput),
+      imageActions,
       checkboxLabel(editActive, 'Übung aktiv'),
       element('p', {
         className: 'field__hint',
@@ -346,6 +399,19 @@ function createExerciseSettings(
   }
   group.append(list);
   return group;
+}
+
+function exerciseThumbnail(exercise: Exercise): HTMLElement {
+  if (!exercise.image) {
+    return element('span', {
+      className: 'exercise-image exercise-image--empty',
+      text: exercise.name.slice(0, 1),
+    });
+  }
+  const image = element('img', { className: 'exercise-image' });
+  image.src = exercise.image.thumbnailDataUrl;
+  image.alt = '';
+  return image;
 }
 
 function createBackupSettings(context: ViewContext): HTMLElement {
@@ -388,8 +454,8 @@ function createBackupSettings(context: ViewContext): HTMLElement {
       const file = input.files?.[0];
       if (!file) return;
       try {
-        if (file.size > 5 * 1024 * 1024)
-          throw new Error('Die Datei ist größer als 5 MiB.');
+        if (file.size > MAX_IMPORT_BYTES)
+          throw new Error('Die Datei ist größer als 50 MiB.');
         showPreparedImport(
           context,
           context.backup.prepareImport(await file.text()),
@@ -406,7 +472,7 @@ function createBackupSettings(context: ViewContext): HTMLElement {
     field(
       'Sicherung importieren',
       input,
-      'Maximal 5 MiB; vorhandene Daten werden erst nach Bestätigung ersetzt.',
+      'Maximal 50 MiB; vorhandene Daten werden erst nach Bestätigung ersetzt.',
     ),
     importHost,
   );

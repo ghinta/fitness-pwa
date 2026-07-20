@@ -8,10 +8,11 @@ designed primarily for installation on iPhone Safari.
 
 ## Version 1
 
-Version 1 provides configurable Training A/B plans, per-session exercise
-alternatives, an optional warm-up and one working set per slot, bodyweight support,
-exercise/session history, advisory 60–90-second weight recommendations, interrupted
-workout recovery, complete JSON backup/restore, and a prompt-updated offline PWA.
+Version 1 provides configurable six-slot Training A/B plans, exercise selection
+directly before each movement, integrated warm-up and working-set timers, local
+exercise photos with thumbnails, bodyweight support, exercise/session history,
+advisory 60–90-second weight recommendations, interrupted workout recovery, complete
+JSON backup/restore, and a prompt-updated offline PWA.
 There is no backend, account, synchronization, analytics, remote font, or external
 API.
 

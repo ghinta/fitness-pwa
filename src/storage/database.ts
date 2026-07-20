@@ -11,7 +11,7 @@ import type {
 import { toStorageError } from './errors';
 
 export const DATABASE_NAME = 'fitness-pwa';
-export const DATABASE_SCHEMA_VERSION = 1;
+export const DATABASE_SCHEMA_VERSION = 2;
 
 export interface StorageMeta {
   key: string;
@@ -31,7 +31,7 @@ export class FitnessDatabase extends Dexie {
   constructor(name = DATABASE_NAME) {
     super(name);
 
-    this.version(DATABASE_SCHEMA_VERSION).stores({
+    const stores = {
       exercises: 'id, active, movementCategory',
       workoutTemplates: 'id, active',
       exerciseSlots: 'id, templateId, [templateId+order]',
@@ -39,9 +39,29 @@ export class FitnessDatabase extends Dexie {
       exerciseResults:
         'id, workoutSessionId, exerciseId, [exerciseId+createdAt], exerciseSlotId',
       meta: 'key',
-    });
+    };
+    this.version(1).stores(stores);
+    this.version(DATABASE_SCHEMA_VERSION)
+      .stores(stores)
+      .upgrade((transaction) => migrateToVersion2(transaction));
     this.on('populate', (transaction) => seedDatabase(transaction));
   }
+}
+
+async function migrateToVersion2(transaction: Transaction): Promise<void> {
+  const seed = createInitialDomainData();
+  const exercises = transaction.table<Exercise>('exercises');
+  const slots = transaction.table<ExerciseSlot>('exerciseSlots');
+  for (const exercise of seed.exercises) {
+    if (!(await exercises.get(exercise.id))) await exercises.add(exercise);
+  }
+  for (const slot of seed.exerciseSlots.filter(({ order }) => order === 6)) {
+    if (!(await slots.get(slot.id))) await slots.add(slot);
+  }
+  await transaction.table<StorageMeta>('meta').put({
+    key: SEED_VERSION_META_KEY,
+    value: INITIAL_SEED_VERSION,
+  });
 }
 
 async function seedDatabase(transaction: Transaction): Promise<void> {

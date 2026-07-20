@@ -8,16 +8,17 @@ takes priority; **Später fortsetzen** returns to the resume card and warns befo
 discarding dirty input.
 
 ```text
-Start → Training A/B exercise choices → Start
-  → exercise 1…5
-      → optional persisted warm-up
-      → required working weight/load, seconds, notes
+Start → Training A/B → Start
+  → exercise 1…6
+      → choose exercise (default preselected; optionally make default)
+      → weight → start/stop optional warm-up timer → review/save
+      → weight → start/stop working timer → review duration/notes → save
       → previous results and advisory recommendation
   → review with recommendation per result → complete → history
 ```
 
 Reload resumes the first slot without a working set and retains the session-local
-exercise choices. Saving confirms through the visible next state only after
+exercise choices and the running or stopped timer draft. Saving confirms through the visible next state only after
 persistence succeeds. A failure leaves entered values in the form.
 
 ## Supporting flows
@@ -25,8 +26,8 @@ persistence succeeds. A failure leaves entered values in the form.
 - **Verlauf** lists completed sessions newest first, session details, notes, warm-ups,
   working sets, and per-exercise working history.
 - **Einstellungen** edits plan names/activation, slot order/activation/primary and
-  alternative exercises, exercise names/muscle groups/increments/activation, and
-  creates custom exercises.
+  alternative exercises, exercise names/muscle groups/increments/activation and local
+  images, and creates custom exercises.
 - **Sicherung** exports all stores; import shows a validated summary, confirms full
   replacement, and downloads a pre-import backup.
 - **Update** uses an unobtrusive status banner and refuses activation while an active

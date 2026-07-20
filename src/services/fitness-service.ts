@@ -7,6 +7,7 @@ import {
   type EquipmentType,
   type Exercise,
   type ExerciseResult,
+  type ExerciseImage,
   type ExerciseSlot,
   type SetType,
   type WorkoutSession,
@@ -85,7 +86,7 @@ export class FitnessService {
 
   async startWorkout(
     templateId: string,
-    selections: Record<string, string>,
+    selections: Record<string, string> = {},
   ): Promise<WorkoutSession> {
     const plan = await this.getPlan(templateId);
     if (!plan.template.active) {
@@ -93,7 +94,7 @@ export class FitnessService {
     }
     const activeSlots = plan.slots.filter(({ slot }) => slot.active);
     for (const { slot, exercises } of activeSlots) {
-      const selection = selections[slot.id];
+      const selection = selections[slot.id] ?? slot.primaryExerciseId;
       if (!exercises.some(({ id, active }) => id === selection && active)) {
         throw new Error(`Bitte wähle eine aktive Übung für „${slot.label}“.`);
       }
@@ -103,15 +104,75 @@ export class FitnessService {
       workoutTemplateId: plan.template.id,
       templateNameSnapshot: plan.template.name,
       exerciseSelections: Object.fromEntries(
-        activeSlots.map(({ slot }) => [slot.id, selections[slot.id] as string]),
+        activeSlots.map(({ slot }) => [
+          slot.id,
+          selections[slot.id] ?? slot.primaryExerciseId,
+        ]),
       ),
       status: 'active',
       startedAt: this.now().toISOString(),
       completedAt: null,
       notes: '',
+      setTimer: null,
     };
     await this.repositories.workouts.startSession(session);
     return session;
+  }
+
+  async selectExercise(
+    session: WorkoutSession,
+    slot: ExerciseSlot,
+    exerciseId: string,
+    useAsDefault: boolean,
+  ): Promise<void> {
+    await this.repositories.workouts.selectExercise(
+      session.id,
+      slot.id,
+      exerciseId,
+      useAsDefault,
+    );
+  }
+
+  async startTimer(
+    session: WorkoutSession,
+    slot: ExerciseSlot,
+    setType: SetType,
+    weightKg: number | null,
+    notes: string,
+  ): Promise<void> {
+    if (session.setTimer)
+      throw new Error(
+        'Es ist bereits ein Timer aktiv oder noch nicht gespeichert.',
+      );
+    await this.repositories.workouts.startTimer(session.id, {
+      exerciseSlotId: slot.id,
+      setType,
+      startedAt: this.now().toISOString(),
+      stoppedAt: null,
+      durationSeconds: null,
+      weightKg,
+      notes: notes.trim(),
+    });
+  }
+
+  async stopTimer(session: WorkoutSession): Promise<number> {
+    const timer = session.setTimer;
+    if (!timer || timer.stoppedAt !== null)
+      throw new Error('Es läuft kein Timer.');
+    const stoppedAt = this.now();
+    const durationSeconds = Math.max(
+      1,
+      Math.min(
+        86_400,
+        Math.round((stoppedAt.getTime() - Date.parse(timer.startedAt)) / 1000),
+      ),
+    );
+    await this.repositories.workouts.stopTimer(
+      session.id,
+      stoppedAt.toISOString(),
+      durationSeconds,
+    );
+    return durationSeconds;
   }
 
   async getActiveWorkout(): Promise<ActiveWorkout | undefined> {
@@ -228,6 +289,7 @@ export class FitnessService {
       movementCategory: input.movementCategory.trim(),
       equipmentType: input.equipmentType,
       weightIncrementKg: input.weightIncrementKg,
+      image: null,
       active: true,
       createdAt: timestamp,
       updatedAt: timestamp,
@@ -236,6 +298,20 @@ export class FitnessService {
     if (issues.length > 0) throw new DomainValidationError(issues);
     await this.repositories.exercises.put(exercise);
     return exercise;
+  }
+
+  async updateExerciseImage(
+    exercise: Exercise,
+    image: ExerciseImage | null,
+  ): Promise<void> {
+    const updated = {
+      ...exercise,
+      image,
+      updatedAt: this.now().toISOString(),
+    };
+    const issues = validateExercise(updated);
+    if (issues.length > 0) throw new DomainValidationError(issues);
+    await this.repositories.exercises.put(updated);
   }
 
   async setExerciseActive(exercise: Exercise, active: boolean): Promise<void> {

@@ -37,6 +37,7 @@ const SET_TYPES: readonly SetType[] = ['warmup', 'working'];
 export const MAX_WEIGHT_KG = 100_000;
 export const MAX_DURATION_SECONDS = 86_400;
 export const MAX_WEIGHT_INCREMENT_KG = 1_000;
+export const MAX_EXERCISE_IMAGE_DATA_URL_LENGTH = 2_000_000;
 export const DOMAIN_COLLECTION_LIMITS = {
   exercises: 500,
   workoutTemplates: 50,
@@ -157,6 +158,33 @@ export function validateExercise(
         `Muss größer als null und höchstens ${MAX_WEIGHT_INCREMENT_KG} kg sein.`,
       ),
     );
+  }
+  if (value.image !== undefined && value.image !== null) {
+    if (!isRecord(value.image)) {
+      issues.push(
+        issue(`${path}.image`, 'invalid-type', 'Muss ein Bildobjekt sein.'),
+      );
+    } else {
+      for (const key of ['dataUrl', 'thumbnailDataUrl'] as const) {
+        const imageValue = value.image[key];
+        if (
+          typeof imageValue !== 'string' ||
+          !/^data:image\/(?:jpeg|webp);base64,/.test(imageValue) ||
+          imageValue.length > MAX_EXERCISE_IMAGE_DATA_URL_LENGTH
+        ) {
+          issues.push(
+            issue(
+              `${path}.image.${key}`,
+              'invalid-value',
+              'Muss ein lokal erzeugtes JPEG- oder WebP-Bild in zulässiger Größe sein.',
+            ),
+          );
+        }
+      }
+      issues.push(
+        ...dateIssues(value.image.updatedAt, `${path}.image.updatedAt`),
+      );
+    }
   }
   if (
     isIsoUtcDate(value.createdAt) &&
@@ -288,6 +316,79 @@ export function validateWorkoutSession(
       );
     }
   }
+  if (value.setTimer !== undefined && value.setTimer !== null) {
+    if (!isRecord(value.setTimer)) {
+      issues.push(
+        issue(`${path}.setTimer`, 'invalid-type', 'Muss ein Timerobjekt sein.'),
+      );
+    } else {
+      issues.push(
+        ...idIssues(
+          value.setTimer.exerciseSlotId,
+          `${path}.setTimer.exerciseSlotId`,
+        ),
+        ...dateIssues(value.setTimer.startedAt, `${path}.setTimer.startedAt`),
+        ...stringIssues(
+          value.setTimer.notes,
+          `${path}.setTimer.notes`,
+          2000,
+          true,
+        ),
+      );
+      if (
+        value.setTimer.weightKg !== null &&
+        (typeof value.setTimer.weightKg !== 'number' ||
+          !Number.isFinite(value.setTimer.weightKg) ||
+          value.setTimer.weightKg < 0 ||
+          value.setTimer.weightKg > MAX_WEIGHT_KG)
+      ) {
+        issues.push(
+          issue(
+            `${path}.setTimer.weightKg`,
+            'invalid-value',
+            'Das Gewicht des Timerentwurfs ist ungültig.',
+          ),
+        );
+      }
+      if (!SET_TYPES.includes(value.setTimer.setType as SetType)) {
+        issues.push(
+          issue(
+            `${path}.setTimer.setType`,
+            'invalid-value',
+            'Unbekannte Satzart.',
+          ),
+        );
+      }
+      if (value.setTimer.stoppedAt === null) {
+        if (value.setTimer.durationSeconds !== null) {
+          issues.push(
+            issue(
+              `${path}.setTimer.durationSeconds`,
+              'invariant',
+              'Ein laufender Timer hat noch keine Dauer.',
+            ),
+          );
+        }
+      } else {
+        issues.push(
+          ...dateIssues(value.setTimer.stoppedAt, `${path}.setTimer.stoppedAt`),
+        );
+        if (
+          !Number.isInteger(value.setTimer.durationSeconds) ||
+          Number(value.setTimer.durationSeconds) <= 0 ||
+          Number(value.setTimer.durationSeconds) > MAX_DURATION_SECONDS
+        ) {
+          issues.push(
+            issue(
+              `${path}.setTimer.durationSeconds`,
+              'invalid-value',
+              'Die gemessene Dauer ist ungültig.',
+            ),
+          );
+        }
+      }
+    }
+  }
   if (value.status !== 'active' && value.status !== 'completed') {
     issues.push(
       issue(`${path}.status`, 'invalid-value', 'Unbekannter Sitzungsstatus.'),
@@ -314,6 +415,15 @@ export function validateWorkoutSession(
           `${path}.completedAt`,
           'invariant',
           'Darf nicht vor dem Beginn liegen.',
+        ),
+      );
+    }
+    if (value.setTimer !== undefined && value.setTimer !== null) {
+      issues.push(
+        issue(
+          `${path}.setTimer`,
+          'invariant',
+          'Ein abgeschlossenes Training darf keinen Timerentwurf enthalten.',
         ),
       );
     }

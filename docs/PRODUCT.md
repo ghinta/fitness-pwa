@@ -8,10 +8,11 @@ Fitness PWA lets one person record HIT-style strength workouts quickly, without 
 
 Version 1 includes exactly:
 
-- Two active templates, **Training A** and **Training B**, each containing five ordered movement slots.
-- Selecting one primary exercise per slot from configured alternatives; slots can be reordered and templates/exercises can be configured or deactivated.
+- Two active templates, **Training A** and **Training B**, each containing six ordered movement slots, including Triceps in A and Biceps in B.
+- Selecting an exercise from slot alternatives immediately before performing it; the primary is preselected and can optionally become the future default.
 - Starting, resuming, completing, or discarding one in-progress session.
-- For each slot, recording an optional warm-up set and exactly one working set. A result stores exercise, weight in kilograms, time under tension in whole seconds, and optional notes.
+- For each slot, timing an optional warm-up set and exactly one working set from persisted timestamps; the stopped duration can be corrected before saving.
+- Adding, replacing, and removing a locally resized exercise image and thumbnail, both included in backup/restore.
 - Viewing previous working-set results for the current exercise, newest first.
 - A non-binding next-weight suggestion: above 90 seconds suggests a 2.5% increase rounded to a configurable equipment increment; at 90 seconds or below it suggests retaining weight. Recommendations never alter stored values.
 - On-device IndexedDB persistence, an offline application shell, installability, and safe update notification.
@@ -30,7 +31,7 @@ A user can install the app, finish Training A or B offline with minimal typing, 
 
 Kilograms are the only unit; dates display in the device time zone; there is at most
 one active session; and deactivation replaces deletion. Warm-ups are persisted.
-Custom exercises are supported. Session substitutions do not alter template defaults;
-the default is changed explicitly in settings. Exercise increments default to 2.5 kg
+Custom exercises are supported. Session substitutions do not alter template defaults
+unless **Als Standard verwenden** is explicitly selected. Exercise increments default to 2.5 kg
 and are editable. Import replaces all data only after validation, confirmation, and
 creation of a pre-import backup.

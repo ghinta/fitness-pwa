@@ -11,9 +11,15 @@ import {
 } from './backup-service';
 
 function snapshot(): StorageSnapshot {
+  const data = createInitialDomainData();
+  data.exercises[0]!.image = {
+    dataUrl: 'data:image/jpeg;base64,AA==',
+    thumbnailDataUrl: 'data:image/jpeg;base64,AA==',
+    updatedAt: '2026-07-19T12:00:00.000Z',
+  };
   return {
-    ...createInitialDomainData(),
-    meta: [{ key: 'seedVersion', value: 1 }],
+    ...data,
+    meta: [{ key: 'seedVersion', value: 2 }],
   };
 }
 
@@ -36,8 +42,12 @@ describe('backup service', () => {
     expect(document.format).toBe(BACKUP_FORMAT);
     expect(document.formatVersion).toBe(BACKUP_FORMAT_VERSION);
     expect(document.exportedAt).toBe('2026-07-19T12:00:00.000Z');
-    expect(document.exercises).toHaveLength(19);
-    expect(document.meta).toEqual([{ key: 'seedVersion', value: 1 }]);
+    expect(document.exercises).toHaveLength(23);
+    expect(
+      (document.exercises as Array<{ image?: { dataUrl: string } }>)[0]?.image
+        ?.dataUrl,
+    ).toBe('data:image/jpeg;base64,AA==');
+    expect(document.meta).toEqual([{ key: 'seedVersion', value: 2 }]);
   });
 
   it('validates fully before replacing the snapshot', async () => {
@@ -54,7 +64,7 @@ describe('backup service', () => {
 
     expect(replace).toHaveBeenCalledOnce();
     expect(prepared.summary).toMatchObject({
-      exercises: 19,
+      exercises: 23,
       templates: 2,
       sessions: 0,
       results: 0,
@@ -76,7 +86,7 @@ describe('backup service', () => {
     );
 
     expect(() => prepareImport(' '.repeat(MAX_IMPORT_BYTES + 1))).toThrow(
-      'größer als 5 MiB',
+      'größer als 50 MiB',
     );
   });
 

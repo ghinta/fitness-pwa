@@ -1,10 +1,4 @@
-import {
-  button,
-  element,
-  field,
-  formatDate,
-  statusMessage,
-} from '../components/dom';
+import { button, element, formatDate, statusMessage } from '../components/dom';
 import { navigate } from '../app/router';
 import type { TemplatePlan } from '../services/fitness-service';
 import type { ViewContext } from './context';
@@ -17,7 +11,7 @@ export async function createStartView(
     element('h1', { text: 'Start' }),
     element('p', {
       className: 'lead',
-      text: 'Wähle einen Plan und passe die Übungen für dieses Training an.',
+      text: 'Wähle einen Plan. Die konkrete Übung wählst du direkt vor jedem Satz.',
     }),
   );
 
@@ -84,18 +78,20 @@ function createPlanCard(context: ViewContext, plan: TemplatePlan): HTMLElement {
     }),
   );
   const activeSlots = plan.slots.filter(({ slot }) => slot.active);
+  const list = element('ol', { className: 'plan-slot-list' });
   for (const { slot, exercises } of activeSlots) {
-    const select = element('select');
-    select.name = slot.id;
-    select.required = true;
-    for (const exercise of exercises.filter(({ active }) => active)) {
-      const option = element('option', { text: exercise.name });
-      option.value = exercise.id;
-      option.selected = exercise.id === slot.primaryExerciseId;
-      select.append(option);
-    }
-    form.append(field(`${slot.order}. ${slot.label}`, select));
+    const primary = exercises.find(({ id }) => id === slot.primaryExerciseId);
+    const item = element('li');
+    item.append(
+      element('strong', { text: slot.label }),
+      element('span', {
+        className: 'muted',
+        text: `Standard: ${primary?.name ?? 'nicht verfügbar'}`,
+      }),
+    );
+    list.append(item);
   }
+  form.append(list);
   const messageHost = element('div');
   const start = button('Training starten', 'button button--primary', 'submit');
   form.append(messageHost, start);
@@ -104,14 +100,8 @@ function createPlanCard(context: ViewContext, plan: TemplatePlan): HTMLElement {
     void (async () => {
       start.disabled = true;
       messageHost.replaceChildren();
-      const selections = Object.fromEntries(
-        activeSlots.map(({ slot }) => [
-          slot.id,
-          (form.elements.namedItem(slot.id) as HTMLSelectElement).value,
-        ]),
-      );
       try {
-        await context.fitness.startWorkout(plan.template.id, selections);
+        await context.fitness.startWorkout(plan.template.id);
         navigate('/training');
       } catch (error) {
         messageHost.append(statusMessage(toMessage(error), 'error'));

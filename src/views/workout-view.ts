@@ -73,6 +73,7 @@ async function createStep(
       className: 'eyebrow',
       text: `${workout.session.templateNameSnapshot} · Übung ${currentIndex + 1} von ${activeSlots.length}`,
     }),
+    exerciseImage(exercise, 'exercise-image exercise-image--workout'),
     element('h1', { text: exercise.name }),
     element('p', { className: 'muted', text: current.slot.label }),
   );
@@ -82,6 +83,20 @@ async function createStep(
   progress.ariaLabel = 'Trainingsfortschritt';
   header.append(progress);
   section.append(header);
+
+  section.append(
+    createExerciseSelection(
+      context,
+      workout,
+      current.slot,
+      current.exercises,
+      exercise,
+      Boolean(
+        existingWarmup ||
+        workout.session.setTimer?.exerciseSlotId === current.slot.id,
+      ),
+    ),
+  );
 
   if (existingWarmup) {
     const saved = element('article', { className: 'card card--compact' });
@@ -131,6 +146,82 @@ async function createStep(
   return section;
 }
 
+function createExerciseSelection(
+  context: ViewContext,
+  workout: ActiveWorkout,
+  slot: ActiveWorkout['plan']['slots'][number]['slot'],
+  exercises: Exercise[],
+  selected: Exercise,
+  locked: boolean,
+): HTMLElement {
+  const form = element('form', { className: 'card exercise-choice' });
+  form.append(element('h2', { text: 'Übung auswählen' }));
+  const choices = element('fieldset', { className: 'exercise-choice__list' });
+  choices.append(
+    element('legend', { className: 'visually-hidden', text: slot.label }),
+  );
+  for (const exercise of exercises.filter(
+    ({ active, id }) => active || id === selected.id,
+  )) {
+    const input = element('input');
+    input.type = 'radio';
+    input.name = 'exercise';
+    input.value = exercise.id;
+    input.checked = exercise.id === selected.id;
+    input.disabled = locked;
+    const label = element('label', { className: 'exercise-choice__option' });
+    label.append(
+      input,
+      exerciseImage(exercise),
+      element('span', { text: exercise.name }),
+    );
+    choices.append(label);
+  }
+  const useDefault = element('input');
+  useDefault.type = 'checkbox';
+  useDefault.disabled = locked;
+  const message = element('div');
+  const save = button('Übung übernehmen', 'button button--small', 'submit');
+  save.disabled = locked;
+  form.append(
+    choices,
+    checkboxLabel(useDefault, 'Als Standard verwenden'),
+    message,
+    save,
+  );
+  if (locked) {
+    message.append(
+      statusMessage(
+        'Die Auswahl ist nach dem ersten gespeicherten Satz fixiert.',
+        'info',
+      ),
+    );
+  }
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    void (async () => {
+      const choice = form.querySelector<HTMLInputElement>(
+        'input[name="exercise"]:checked',
+      );
+      if (!choice) return;
+      save.disabled = true;
+      try {
+        await context.fitness.selectExercise(
+          workout.session,
+          slot,
+          choice.value,
+          useDefault.checked,
+        );
+        await context.refresh();
+      } catch (error) {
+        message.replaceChildren(statusMessage(toMessage(error), 'error'));
+        save.disabled = false;
+      }
+    })();
+  });
+  return form;
+}
+
 function createSetForm(
   context: ViewContext,
   workout: ActiveWorkout,
@@ -173,6 +264,16 @@ function createSetForm(
   duration.max = '86400';
   duration.step = '1';
   duration.required = true;
+  const timer = workout.session.setTimer;
+  const ownsTimer =
+    timer?.exerciseSlotId === slot.id && timer.setType === setType;
+  if (ownsTimer && timer.weightKg !== null) {
+    weight.value = String(timer.weightKg);
+  }
+  if (ownsTimer && timer.durationSeconds !== null) {
+    duration.value = String(timer.durationSeconds);
+  }
+  duration.readOnly = !ownsTimer || timer?.stoppedAt === null;
   grid.append(
     field(
       exercise.equipmentType === 'bodyweight'
@@ -183,19 +284,89 @@ function createSetForm(
         ? 'Leer lassen für reines Körpergewicht'
         : undefined,
     ),
-    field('Dauer (Sekunden)', duration, 'Zielbereich: 60–90 Sekunden'),
+    field(
+      'Gemessene Dauer (Sekunden)',
+      duration,
+      'Nach dem Stoppen bei Bedarf korrigierbar',
+    ),
   );
+  const timerBox = element('div', { className: 'set-timer' });
+  const timerDisplay = element('output', {
+    className: 'set-timer__display',
+    text: '0 s',
+  });
+  timerDisplay.setAttribute('aria-live', 'off');
+  const timerHint = element('p', {
+    className: 'set-timer__hint',
+    text: 'Zielbereich: 60–90 Sekunden',
+  });
+  const timerActions = element('div', { className: 'button-row' });
+  const start = button('Start', 'button button--timer-start');
+  const stop = button('Stop', 'button button--timer-stop');
+  start.disabled = Boolean(timer);
+  stop.hidden = !ownsTimer || timer?.stoppedAt !== null;
+  if (ownsTimer)
+    updateTimerDisplay(
+      timerDisplay,
+      timerHint,
+      timer.startedAt,
+      timer.durationSeconds,
+    );
+  if (ownsTimer && timer?.stoppedAt === null) {
+    const interval = window.setInterval(() => {
+      if (!timerDisplay.isConnected) {
+        window.clearInterval(interval);
+        return;
+      }
+      updateTimerDisplay(timerDisplay, timerHint, timer.startedAt, null);
+    }, 250);
+  }
+  start.addEventListener('click', () => {
+    void (async () => {
+      if (!weight.reportValidity()) return;
+      start.disabled = true;
+      try {
+        await context.fitness.startTimer(
+          workout.session,
+          slot,
+          setType,
+          weight.value.trim() === '' ? null : Number(weight.value),
+          notes.value,
+        );
+        await context.refresh();
+      } catch (error) {
+        messages.replaceChildren(statusMessage(toMessage(error), 'error'));
+        start.disabled = false;
+      }
+    })();
+  });
+  stop.addEventListener('click', () => {
+    void (async () => {
+      stop.disabled = true;
+      try {
+        await context.fitness.stopTimer(workout.session);
+        await context.refresh();
+      } catch (error) {
+        messages.replaceChildren(statusMessage(toMessage(error), 'error'));
+        stop.disabled = false;
+      }
+    })();
+  });
+  timerActions.append(start, stop);
+  timerBox.append(timerDisplay, timerHint, timerActions);
   const notes = element('textarea');
   notes.name = 'notes';
   notes.rows = 2;
   notes.maxLength = 2000;
+  if (ownsTimer) notes.value = timer.notes;
   const messages = element('div');
   const save = button(
     isWarmup ? 'Aufwärmsatz speichern' : 'Arbeitssatz speichern & weiter',
     isWarmup ? 'button' : 'button button--primary',
     'submit',
   );
-  form.append(grid, field('Notiz (optional)', notes), messages, save);
+  save.disabled = !ownsTimer || timer?.durationSeconds === null;
+  form.append(grid, timerBox, field('Notiz (optional)', notes), messages, save);
 
   form.addEventListener('input', () => {
     form.dataset.dirty = 'true';
@@ -229,6 +400,55 @@ function createSetForm(
     })();
   });
   return form;
+}
+
+function updateTimerDisplay(
+  output: HTMLOutputElement,
+  hint: HTMLElement,
+  startedAt: string,
+  fixedDuration: number | null,
+): void {
+  const seconds =
+    fixedDuration ??
+    Math.max(0, Math.floor((Date.now() - Date.parse(startedAt)) / 1000));
+  output.textContent = `${seconds} s`;
+  output.classList.toggle(
+    'set-timer__display--target',
+    seconds >= 60 && seconds < 90,
+  );
+  output.classList.toggle('set-timer__display--upper', seconds >= 90);
+  hint.textContent =
+    seconds >= 90
+      ? '90 Sekunden erreicht – Timer läuft weiter.'
+      : seconds >= 60
+        ? 'Zielbereich erreicht.'
+        : 'Zielbereich: 60–90 Sekunden';
+}
+
+function exerciseImage(
+  exercise: Exercise,
+  className = 'exercise-image',
+): HTMLElement {
+  if (!exercise.image)
+    return element('span', {
+      className: `${className} exercise-image--empty`,
+      text: exercise.name.slice(0, 1),
+    });
+  const image = element('img', { className });
+  image.src = className.includes('--workout')
+    ? exercise.image.dataUrl
+    : exercise.image.thumbnailDataUrl;
+  image.alt = '';
+  return image;
+}
+
+function checkboxLabel(
+  input: HTMLInputElement,
+  text: string,
+): HTMLLabelElement {
+  const label = element('label', { className: 'checkbox' });
+  label.append(input, element('span', { text }));
+  return label;
 }
 
 function createPreviousCard(
@@ -302,7 +522,7 @@ function createReview(
     element('h1', { text: 'Training prüfen' }),
     element('p', {
       className: 'lead',
-      text: 'Alle fünf Arbeitssätze sind gespeichert.',
+      text: `Alle ${workingResults.length} Arbeitssätze sind gespeichert.`,
     }),
   );
   const list = element('ol', { className: 'review-list card' });

@@ -12,7 +12,7 @@ import type {
 
 export const BACKUP_FORMAT = 'fitness-pwa-backup';
 export const BACKUP_FORMAT_VERSION = 1;
-export const MAX_IMPORT_BYTES = 5 * 1024 * 1024;
+export const MAX_IMPORT_BYTES = 50 * 1024 * 1024;
 
 const ROOT_KEYS = [
   'format',
@@ -97,7 +97,7 @@ export function snapshotToDocument(
 export function prepareImport(text: string): PreparedImport {
   if (new TextEncoder().encode(text).byteLength > MAX_IMPORT_BYTES) {
     throw new BackupValidationError(
-      'Die Sicherungsdatei ist größer als 5 MiB.',
+      'Die Sicherungsdatei ist größer als 50 MiB.',
     );
   }
 

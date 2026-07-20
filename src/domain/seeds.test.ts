@@ -9,7 +9,7 @@ import {
 import { validateDomainData } from './validation';
 
 describe('initial domain seeds', () => {
-  it('defines Training A and B with five ordered slots each', () => {
+  it('defines Training A and B with six ordered slots each', () => {
     expect(DEFAULT_WORKOUT_TEMPLATES.map(({ name }) => name)).toEqual([
       'Training A',
       'Training B',
@@ -19,7 +19,7 @@ describe('initial domain seeds', () => {
         DEFAULT_EXERCISE_SLOTS.filter(
           ({ templateId }) => templateId === template.id,
         ).map(({ order }) => order),
-      ).toEqual([1, 2, 3, 4, 5]);
+      ).toEqual([1, 2, 3, 4, 5, 6]);
     }
   });
 
@@ -45,6 +45,10 @@ describe('initial domain seeds', () => {
         'Schulterdrücken',
         'Schulterpresse',
         'Bulgarische Kniebeuge',
+        'Trizepsdrücken am Kabelzug',
+        'Dips',
+        'Bizepscurls',
+        'Hammercurls',
       ]),
     );
   });
