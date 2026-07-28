@@ -8,7 +8,7 @@ ENV TZ="$TZ"
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-<<<<<<< HEAD
+
 # Trust the company CA before any apt, curl, Git, Node or Python downloads.
 COPY certificates/ca.crt \
   /usr/local/share/ca-certificates/company-ca.crt
@@ -23,8 +23,7 @@ ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 ENV NODE_EXTRA_CA_CERTS=/usr/local/share/ca-certificates/company-ca.crt
 ENV UV_NATIVE_TLS=true
 
-=======
->>>>>>> 2297f1c913e52b2aad38a34e16ba26684216b17c
+
 # Install additional system packages (base image already includes git, curl, sudo, etc.)
 RUN apt-get update && apt-get install -y --no-install-recommends \
   # Sandboxing support for Claude Code
