@@ -87,9 +87,10 @@ export function createApp(
     };
   };
 
-  const render = async (
-    { scroll = 'top', focusSelector }: RefreshOptions = {},
-  ): Promise<void> => {
+  const render = async ({
+    scroll = 'top',
+    focusSelector,
+  }: RefreshOptions = {}): Promise<void> => {
     const renderId = ++rendering;
     main.ariaBusy = 'true';
     main.replaceChildren(
