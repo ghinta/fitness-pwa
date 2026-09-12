@@ -67,6 +67,16 @@ test('persists an optional warmup after reload and caches the offline shell', as
   const warmup = formWithHeading(page, 'Optionaler Aufwärmsatz');
   await warmup.locator('input[name="weight"]').fill('20');
   await warmup.getByRole('button', { name: 'Start' }).click();
+  const runningWarmup = formWithHeading(page, 'Optionaler Aufwärmsatz');
+  await expect(runningWarmup.getByRole('button', { name: 'Stop' })).toBeFocused();
+  await expect(runningWarmup.getByText('0 s')).toBeInViewport();
+
+  // A PWA may be restored from the mobile lock screen without a full reload.
+  // The resumed view must expose fresh controls for the persisted timer.
+  await page.evaluate(() => {
+    window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
+  });
+  await expect(runningWarmup.getByRole('button', { name: 'Stop' })).toBeFocused();
   await page.clock.fastForward(30_000);
   await page.reload();
   const resumedWarmup = formWithHeading(page, 'Optionaler Aufwärmsatz');

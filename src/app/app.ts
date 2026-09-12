@@ -10,7 +10,11 @@ import {
 import { createHistoryView } from '../views/history-view';
 import { createSettingsView } from '../views/settings-view';
 import { createStartView } from '../views/start-view';
-import type { ViewContext, ViewFactory } from '../views/context';
+import type {
+  RefreshOptions,
+  ViewContext,
+  ViewFactory,
+} from '../views/context';
 import { createWorkoutView } from '../views/workout-view';
 import { resolveRoute } from './router';
 import { setupPwaUpdates } from './pwa-update';
@@ -44,6 +48,7 @@ export function createApp(
   let dirty = false;
   let activeWorkout = false;
   let runningTimer = false;
+  let ready = false;
   let fitness = dependencies.fitness;
   let backup = dependencies.backup;
 
@@ -67,7 +72,8 @@ export function createApp(
   const navigation = createNavigation();
   root.append(skipLink, header, updateHost, main, navigation);
 
-  const refresh = async (): Promise<void> => render();
+  const refresh = async (options?: RefreshOptions): Promise<void> =>
+    render(options);
   const context = (): ViewContext => {
     if (!fitness || !backup)
       throw new Error('Die Anwendung ist nicht initialisiert.');
@@ -81,7 +87,9 @@ export function createApp(
     };
   };
 
-  const render = async (): Promise<void> => {
+  const render = async (
+    { scroll = 'top', focusSelector }: RefreshOptions = {},
+  ): Promise<void> => {
     const renderId = ++rendering;
     main.ariaBusy = 'true';
     main.replaceChildren(
@@ -100,7 +108,17 @@ export function createApp(
       main.removeAttribute('aria-busy');
       updateNavigation(navigation);
       document.title = `${view.querySelector('h1')?.textContent ?? 'Fitness'} · Fitness PWA`;
-      window.scrollTo({ top: 0, behavior: 'instant' });
+      const focusTarget = focusSelector
+        ? main.querySelector<HTMLElement>(focusSelector)
+        : undefined;
+      focusTarget?.focus({ preventScroll: true });
+      if (scroll === 'top') {
+        window.scrollTo({ top: 0, behavior: 'instant' });
+      } else if (scroll === 'timer') {
+        main
+          .querySelector<HTMLElement>('[data-timer-display]')
+          ?.scrollIntoView({ block: 'center', behavior: 'auto' });
+      }
     } catch (error) {
       main.removeAttribute('aria-busy');
       main.replaceChildren(createFailure(error, () => void render()));
@@ -125,12 +143,29 @@ export function createApp(
   const onBeforeUnload = (event: BeforeUnloadEvent): void => {
     if (dirty || runningTimer) event.preventDefault();
   };
+  const recoverAfterResume = (): void => {
+    if (!ready || stopped || document.visibilityState !== 'visible' || dirty)
+      return;
+    // Mobile browsers can discard native form focus while the PWA is suspended.
+    // Rebuilding from the persisted session gives the user fresh, enabled controls;
+    // an active timer is also brought back into view immediately.
+    void render({
+      scroll: 'timer',
+      focusSelector: '[data-timer-control="stop"]',
+    });
+  };
+  const onVisibilityChange = (): void => {
+    if (document.visibilityState === 'visible') recoverAfterResume();
+  };
+  const onPageShow = (): void => recoverAfterResume();
   let disposeUpdates = (): void => undefined;
 
   return {
     async start(): Promise<void> {
       window.addEventListener('hashchange', onHashChange);
       window.addEventListener('beforeunload', onBeforeUnload);
+      window.addEventListener('pageshow', onPageShow);
+      document.addEventListener('visibilitychange', onVisibilityChange);
       try {
         if (!fitness || !backup) {
           const database = await openFitnessDatabase(
@@ -144,6 +179,7 @@ export function createApp(
           updateHost,
           () => !activeWorkout && !dirty,
         );
+        ready = true;
         await render();
       } catch (error) {
         main.replaceChildren(createFailure(error, () => void this.start()));
@@ -153,6 +189,8 @@ export function createApp(
       stopped = true;
       window.removeEventListener('hashchange', onHashChange);
       window.removeEventListener('beforeunload', onBeforeUnload);
+      window.removeEventListener('pageshow', onPageShow);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       disposeUpdates();
     },
   };

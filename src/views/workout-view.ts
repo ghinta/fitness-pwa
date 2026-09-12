@@ -235,6 +235,7 @@ function createSetForm(
     className: `card set-form ${isWarmup ? 'set-form--warmup' : 'card--accent'}`,
   });
   form.dataset.dirty = 'false';
+  form.dataset.setType = setType;
   form.append(
     element('h2', {
       text: isWarmup ? 'Optionaler Aufwärmsatz' : 'Arbeitssatz',
@@ -295,6 +296,7 @@ function createSetForm(
     className: 'set-timer__display',
     text: '0 s',
   });
+  timerDisplay.dataset.timerDisplay = 'true';
   timerDisplay.setAttribute('aria-live', 'off');
   const timerHint = element('p', {
     className: 'set-timer__hint',
@@ -303,6 +305,7 @@ function createSetForm(
   const timerActions = element('div', { className: 'button-row' });
   const start = button('Start', 'button button--timer-start');
   const stop = button('Stop', 'button button--timer-stop');
+  stop.dataset.timerControl = 'stop';
   start.disabled = Boolean(timer);
   stop.hidden = !ownsTimer || timer?.stoppedAt !== null;
   if (ownsTimer)
@@ -333,7 +336,10 @@ function createSetForm(
           weight.value.trim() === '' ? null : Number(weight.value),
           notes.value,
         );
-        await context.refresh();
+        await context.refresh({
+          scroll: 'timer',
+          focusSelector: '[data-timer-control="stop"]',
+        });
       } catch (error) {
         messages.replaceChildren(statusMessage(toMessage(error), 'error'));
         start.disabled = false;
@@ -345,7 +351,10 @@ function createSetForm(
       stop.disabled = true;
       try {
         await context.fitness.stopTimer(workout.session);
-        await context.refresh();
+        await context.refresh({
+          scroll: 'timer',
+          focusSelector: `form[data-set-type="${setType}"] input[name="duration"]`,
+        });
       } catch (error) {
         messages.replaceChildren(statusMessage(toMessage(error), 'error'));
         stop.disabled = false;
